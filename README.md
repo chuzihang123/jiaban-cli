@@ -4,7 +4,7 @@
 
 Jiaban CLI 是家办系统的 Agent 测试适配器。公开仓库 `chuzihang123/jiaban-cli` 仅用于匿名下载经过固定版本和 SHA-256 校验的 Release 包；仓库公开不代表软件可用于生产、对外服务或绕过后端权限。
 
-0.2.0 保留健康检查、认证状态、客户和合同等最小领域命令，并新增受控的 `api request` 高级入口，用于构造和验证仓库中 247 个 HTTP 端点。WebSocket 端点不属于这 247 个 HTTP 端点，也不由本命令支持。
+0.3.0 在受控 CLI 上增加一个总路由 Skill 和八个角色 Skill。总 Skill 根据自然语言、目标业务和明确角色选择唯一子 Skill；无法唯一识别时必须澄清，不能自动选择更高权限角色。CLI 继续支持健康检查、最小领域命令和受控的 `api request`，WebSocket 不在支持范围内。
 
 ## 环境要求
 
@@ -24,7 +24,7 @@ Jiaban CLI 是家办系统的 Agent 测试适配器。公开仓库 `chuzihang123
 标准内部安装方式是从公开 GitHub Release 匿名安装固定版本包。目标机器需预装 Node.js 20 或更高版本及 npm，无需 GitHub 认证：
 
 ```powershell
-npm install -g https://github.com/chuzihang123/jiaban-cli/releases/download/v0.2.0/jiaban-cli-0.2.0.tgz
+npm install -g https://github.com/chuzihang123/jiaban-cli/releases/download/v0.3.0/jiaban-cli-0.3.0.tgz
 jiaban --version
 jiaban --help
 ```
@@ -32,14 +32,14 @@ jiaban --help
 如需先下载并核对 SHA-256，可选用 GitHub CLI；公开仓库无需认证：
 
 ```powershell
-gh release download v0.2.0 --repo chuzihang123/jiaban-cli --pattern "jiaban-cli-0.2.0.tgz*" --clobber
-Get-FileHash .\jiaban-cli-0.2.0.tgz -Algorithm SHA256
+gh release download v0.3.0 --repo chuzihang123/jiaban-cli --pattern "jiaban-cli-0.3.0.tgz*" --clobber
+Get-FileHash .\jiaban-cli-0.3.0.tgz -Algorithm SHA256
 ```
 
 无法访问 GitHub 时，可由内部管理员安全传递已校验的本地 tgz，再安装：
 
 ```powershell
-npm install -g .\jiaban-cli-0.2.0.tgz
+npm install -g .\jiaban-cli-0.3.0.tgz
 jiaban --version
 jiaban --help
 ```
@@ -52,6 +52,24 @@ Get-Content $skillPath
 ```
 
 Agent 应从该路径加载包内 `SKILL.md`，不得复制未知来源的 Skill，不得执行 `npm publish`。仅在源码开发目录可使用 `npm ci`、`npm test` 和 `npm link` 联调。
+
+## 总 Skill 与八个角色 Skill
+
+安装包内共含九个 Skill 入口：根 `SKILL.md` 是总路由，`skills/*/SKILL.md` 是八个角色入口。飞书或 AI 宿主优先只注册根 Skill；如果宿主不支持按相对链接加载子 Skill，则在部署阶段注册以下九个文件，不能复制文件或凭据：
+
+```text
+SKILL.md
+skills/web-admin/SKILL.md       WEB_ADMIN / profile web-admin
+skills/manager/SKILL.md         MANAGER / profile manager
+skills/p9/SKILL.md              SENIOR_ADMIN / profile p9
+skills/p8/SKILL.md              BRANCH_GENERAL_MANAGER / profile p8
+skills/p7/SKILL.md              SENIOR_MANAGER / profile p7
+skills/specialist/SKILL.md      TRUST_SPECIALIST / profile specialist
+skills/operations/SKILL.md      OPERATIONS / profile operations
+skills/customer/SKILL.md        CUSTOMER / profile customer
+```
+
+每个角色使用单独的专用测试账号和预置加密 Profile。业务调用每次显式带固定 `--profile`；角色 Skill 不接收账号、密码或 Token，也不执行 Profile 凭据配置。`activeRole` 仅用于核对映射，不是权限沙箱，后端权限、租户和数据范围始终生效。
 
 ## 基础命令和 Profile
 
@@ -166,7 +184,7 @@ stdout 始终只输出一个 JSON 对象。成功示例：
 
 失败同样输出脱敏 JSON 并非零退出。退出码：`0` 成功、`1` 内部错误、`2` 参数或确认错误、`3` 配置错误、`4` 认证或授权失败、`5` 未找到、`6` 后端/协议/文件响应错误、`7` 网络或超时。
 
-0.2.0 的构造测试覆盖仓库静态盘点的 247 个 HTTP 端点，包括路径参数、query、JSON、表单、multipart 上传和二进制下载形态；这表示 CLI 能安全构造这些 HTTP 请求，不表示所有角色都能访问、请求一定成功或业务副作用已获批准。WebSocket 路由明确不计入 247，也不支持建立长连接。
+0.3.0 的构造测试覆盖仓库静态盘点的 247 个 HTTP 端点，包括路径参数、query、JSON、表单、multipart 上传和二进制下载形态；这表示 CLI 能安全构造这些 HTTP 请求，不表示所有角色都能访问、请求一定成功或业务副作用已获批准。WebSocket 路由明确不计入 247，也不支持建立长连接。
 
 ## 安全边界
 

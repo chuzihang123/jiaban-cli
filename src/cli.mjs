@@ -1,7 +1,7 @@
 import { ProfileStore, ProfileStoreError, resolveConfigDir } from './profile-store.mjs';
 import { GenericApiError, appendAudit, executeGenericRequest, parseApiRequestArgs, prepareGenericRequest } from './generic-api.mjs';
 
-const VERSION = '0.2.0';
+const VERSION = '0.3.0';
 const REQUEST_TIMEOUT_MS = 10_000;
 const POSITIVE_ID_PATTERN = /^[1-9]\d*$/;
 const PROFILE_PATTERN = /^[A-Za-z0-9_-]+$/;
