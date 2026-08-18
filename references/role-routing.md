@@ -7,8 +7,8 @@ This is the single routing source. A phrase must identify one row; otherwise ask
 | web-admin | WEB_ADMIN | web-admin | 后台管理员、Web管理员、后台用户权限、设置管理员账户、初始化管理员账户 | 后台用户、角色、权限、组织配置 |
 | manager | MANAGER | manager | 客户经理、P6经理、后端显示P6经理 | 所属客户、客户服务、合同跟进 |
 | p9 | SENIOR_ADMIN | p9 | P9总经理、P9高级管理 | 本公司及后端授权管理链 |
-| p8 | BRANCH_GENERAL_MANAGER | p8 | P8高级经理、分公司总经理 | 授权下属树查看、配置和转交 |
-| p7 | SENIOR_MANAGER | p7 | P7高级经理、P7团队管理 | 授权下属树查看、配置和转交 |
+| p8 | BRANCH_GENERAL_MANAGER | p8 | P8高级经理、分公司总经理 | 授权下属树查看和配置；不宣称审批或转交权 |
+| p7 | SENIOR_MANAGER | p7 | P7高级经理、P7团队管理 | 授权下属树查看和配置；不宣称审批或转交权 |
 | specialist | TRUST_SPECIALIST | specialist | 信托专员、信托业务专员 | 流程创建、审核、退回重签和归档 |
 | operations | OPERATIONS | operations | 产品经理、运营产品岗位 | 产品池、产品配置、运营发布 |
 | customer | CUSTOMER | customer | 客户本人、我的合同、我的材料 | 自有账户、业务和客户签署 |

@@ -24,7 +24,7 @@ description: Routes internal isolated-test Jiaban requests to eight role skills 
 1. Extract the requested role, business target, action, and data scope.
 2. Match exactly one row in [role-routing.md](references/role-routing.md).
 3. If the request is ambiguous, especially “管理员”, “总经理”, or “高级经理”, ask for the exact role instead of selecting a more privileged role.
-4. Load only the matched role Skill below and follow it with [CLI contract](references/cli-contract.md) and [safety policy](references/safety-policy.md).
+4. Use [operation index](references/operation-index.md) to locate the domain, then load only the matched role Skill and its local `operations.md`.
 5. If the selected Profile reports a different `activeRole`, stop. Never switch identity to overcome 401/403.
 
 ## Role Skills
@@ -40,9 +40,7 @@ description: Routes internal isolated-test Jiaban requests to eight role skills 
 
 ## Universal execution rules
 
-- Prefer a fixed read-only CLI command only when the matched role is eligible under the CLI contract and it exactly covers the request.
-- Every generic API request starts with `--dry-run` and uses only the confirmed `/api/**` path.
-- A write requires the user's specific confirmation in the current turn before adding `--yes`.
-- DELETE and high-risk paths require the CLI's current single-use `--plan-id`.
-- Do not broaden IDs, paths, query ranges, files, roles, tenants, or profiles.
-- Return only the minimum result needed for the request.
+- Follow [dialog and parameter state](references/dialog-state.md), [error policy](references/error-policy.md), [CLI contract](references/cli-contract.md), and [safety policy](references/safety-policy.md) only when execution reaches those stages.
+- Never invent an endpoint or parameter. If no indexed `operationId` matches, stop and report that the operation is not yet documented.
+- Every generic request starts with dry-run. Writes require current-turn confirmation; R3/R4 require the current single-use plan.
+- Return only the operation index's allowed minimum result.

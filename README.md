@@ -4,7 +4,7 @@
 
 Jiaban CLI 是家办系统的 Agent 测试适配器。公开仓库和 Release 不包含任何账号、密码或 Token；工具仍仅限已授权的内部隔离测试，禁止用于生产或绕过后端权限。
 
-0.3.2 在九个角色路由 Skill 和受控 CLI 上增加对话式 `WEB_ADMIN` 初始化：先验证固定测试后端的登录与身份，再原子加密保存 Profile `web-admin`。源码、Git commit 和安装包都不携带真实配置。
+0.4.0 将九个角色 Skill 改为渐进加载：根 Skill 只做角色和操作域索引，每个角色按需加载自己的 `operations.md`，共享补参状态、错误策略、CLI契约和安全规则。对话式 `WEB_ADMIN` 初始化仍先验证固定测试后端的登录与身份，再原子加密保存 Profile `web-admin`。
 
 ## 环境要求
 
@@ -24,7 +24,7 @@ Jiaban CLI 是家办系统的 Agent 测试适配器。公开仓库和 Release �
 标准安装要求目标机器预装 Node.js 20 和 npm。公开 Release 可直接安装，但 CLI 仍只允许用于内部隔离测试：
 
 ```powershell
-npm install -g https://github.com/chuzihang123/jiaban-cli/releases/download/v0.3.2/jiaban-cli-0.3.2.tgz
+npm install -g ./jiaban-cli-0.4.0.tgz
 jiaban --version
 jiaban --help
 ```
@@ -181,7 +181,16 @@ stdout 始终只输出一个 JSON 对象。成功示例：
 
 失败同样输出脱敏 JSON 并非零退出。退出码：`0` 成功、`1` 内部错误、`2` 参数或确认错误、`3` 配置错误、`4` 认证或授权失败、`5` 未找到、`6` 后端/协议/文件响应错误、`7` 网络或超时。
 
-0.3.2 的构造测试覆盖仓库静态盘点的 247 个 HTTP 端点，包括路径参数、query、JSON、表单、multipart 上传和二进制下载形态；这表示 CLI 能安全构造这些 HTTP 请求，不表示所有角色都能访问、请求一定成功或业务副作用已获批准。WebSocket 路由明确不计入 247，也不支持建立长连接。
+CLI 的通用请求层覆盖仓库静态盘点的 HTTP 请求形态，包括路径参数、query、JSON、表单、multipart 上传和二进制下载；这只表示 CLI 能安全构造请求。AI 只允许执行当前角色 `operations.md` 已索引的 `operationId`，未收录操作必须停止并补充手册，不能猜测端点。
+
+## Skill 渐进加载
+
+1. `SKILL.md` 只加载角色路由和操作域索引。
+2. 命中唯一角色后，只加载 `skills/<role>/SKILL.md`。
+3. 明确业务动作后，再加载该角色同目录 `operations.md`。
+4. 只有进入补参、执行或错误阶段时，才加载 `dialog-state.md`、`cli-contract.md`、`safety-policy.md` 或 `error-policy.md`。
+
+例如“创建 P9 + 手机号 + 姓名”不会立即调用接口；`admin.user.create-p9` 还要求明确 `departmentId`（所属公司/部门），Skill 会先补问该参数，再进行 dry-run 和当前回合确认。
 
 ## 安全边界
 

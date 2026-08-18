@@ -14,9 +14,9 @@ description: Handles isolated-test Jiaban customer self-service with the dedicat
 
 ## Workflow
 
-1. Never use the fixed senior customer or contract commands; use only `/api/mobile/customer/**` routes.
-2. Dry-run `jiaban --profile customer api request GET /api/mobile/customer/<confirmed-path> --dry-run` before the matching read.
-3. Customer signing is routed only here. Dry-run the exact signing or other customer write and obtain current-turn confirmation before adding `--yes`.
-4. Signing, status changes, withdrawal, replacement, and DELETE require a fresh `--plan-id`.
+1. Never use fixed senior commands; load [CUSTOMER operations](operations.md) and select one `operationId` under `/api/mobile/customer/**`.
+2. Collect every required input and follow [dialog state](../../references/dialog-state.md).
+3. Customer signing is routed only here. Writes need current-turn confirmation; R3/R4 need a fresh `--plan-id`.
+4. Follow [error policy](../../references/error-policy.md) and return only the current customer's minimum result.
 
-Never switch to MANAGER or an admin Profile after 401/403 or unavailable data. Follow the [CLI contract](../../references/cli-contract.md), [safety policy](../../references/safety-policy.md), and [role map](../../references/role-routing.md).
+Never switch to MANAGER or an admin Profile after 401/403 or unavailable data. Follow the [CLI contract](../../references/cli-contract.md) and [safety policy](../../references/safety-policy.md).

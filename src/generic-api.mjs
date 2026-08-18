@@ -4,7 +4,23 @@ import path from 'node:path';
 
 const METHODS = new Set(['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE']);
 const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
-const HIGH_RISK_PATH = /(reset-password|status|permissions|approve|reject|sign|publish|forward|archive|withdraw|replace)/i;
+const HIGH_RISK_ACTION = /(?:^|\/)(?:reset-password|status|permissions|approve|reject(?:-config|-sign)?|sign|publish|forward(?:-customer)?|return(?:-four-docs|-sign)?|recall|revise|regenerate|skip|confirm(?:-config)?|start|complete|archive|withdraw|replace|active-role|password)(?:\/|$)/i;
+const HIGH_RISK_WRITE_ROUTES = [
+  ['POST', /^\/api\/admin\/users$/],
+  ['PUT', /^\/api\/(?:admin\/users|senior\/company\/users)\/\d+$/],
+  ['PUT', /^\/api\/senior\/customers\/\d+$/],
+  ['POST', /^\/api\/manager\/customers$/],
+  ['PUT', /^\/api\/manager\/customers\/\d+$/],
+  ['POST', /^\/api\/manager\/material-tasks\/\d+\/submit-review$/],
+  ['POST', /^\/api\/(?:manager|senior)\/contract-flows\/\d+\/config$/],
+  ['POST', /^\/api\/mobile\/customer\/first-login-agreement$/],
+  ['PUT', /^\/api\/mobile\/customer\/profile$/],
+  ['PUT', /^\/api\/operations\/products\/\d+\/config-file$/],
+  ['POST|PUT', /^\/api\/operations\/archive-(?:categories|classifications)(?:\/\d+)?$/],
+  ['PUT', /^\/api\/operations\/archives\/\d+\/classification$/],
+  ['POST|PUT|DELETE', /^\/api\/admin\/(?:service-plan-templates|service-agreement-templates|asset-templates)(?:\/\d+)?$/],
+  ['POST|PUT', /^\/api\/specialist\/(?:contract-templates|four-piece-elements)(?:\/\d+)?(?:\/html)?$/],
+];
 const PROTECTED_HEADERS = /^(host|trust_token|authorization|cookie|set-cookie|content-length|transfer-encoding|connection|proxy-|forwarded$|x-forwarded-|content-type$|origin$|referer$|accept-encoding$|expect$|te$|trailer$|upgrade$|x-http-method$|x-http-method-override$|x-method-override$|x-original-url$|x-rewrite-url$)/i;
 const SECRET_KEYS = /password|token|secret|authorization|cookie/i;
 const MAX_TEXT_BYTES = 1024 * 1024;
@@ -108,7 +124,9 @@ export function parseApiRequestArgs(args) {
   if (options.multipart && !(options.forms.length || options.uploads.length || options.jsonParts.length)) fail('INVALID_BODY', '--multipart 至少需要一个字段或文件');
   if (options.overwrite && !options.output) fail('INVALID_OUTPUT', '--overwrite 必须配合 --output');
   if (options.reason && (options.reason.length > 512 || /[\u0000-\u001f\u007f]/.test(options.reason))) fail('INVALID_ARGUMENT', '--reason 格式无效');
-  const highRisk = method === 'DELETE' || HIGH_RISK_PATH.test(apiPath);
+  const indexedHighRisk = HIGH_RISK_WRITE_ROUTES.some(([methodPattern, pathPattern]) => new RegExp(`^(?:${methodPattern})$`).test(method) && pathPattern.test(apiPath));
+  const highRisk = WRITE_METHODS.has(method)
+    && (method === 'DELETE' || HIGH_RISK_ACTION.test(apiPath) || indexedHighRisk);
   if ((WRITE_METHODS.has(method) || highRisk) && !options.reason?.trim()) fail('WRITE_CONFIRMATION_REQUIRED', '写入或高危请求必须提供 --reason');
   if ((WRITE_METHODS.has(method) || highRisk) && !options.dryRun && !options.yes) fail('WRITE_CONFIRMATION_REQUIRED', '执行写入或高危请求必须提供 --yes');
   return { method, apiPath, options, highRisk };

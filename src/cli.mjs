@@ -1,7 +1,7 @@
 import { ProfileStore, ProfileStoreError, resolveConfigDir } from './profile-store.mjs';
 import { GenericApiError, appendAudit, executeGenericRequest, parseApiRequestArgs, prepareGenericRequest } from './generic-api.mjs';
 
-const VERSION = '0.3.2';
+const VERSION = '0.4.0';
 const REQUEST_TIMEOUT_MS = 10_000;
 const POSITIVE_ID_PATTERN = /^[1-9]\d*$/;
 const PROFILE_PATTERN = /^[A-Za-z0-9_-]+$/;
@@ -528,6 +528,7 @@ export async function run(argv, runtime = {}) {
   const fetchImpl = runtime.fetch ?? globalThis.fetch;
   let commandName = 'unknown';
   let secrets = [];
+  let requestMethod = null;
 
   try {
     const { args, profile } = extractProfile(argv);
@@ -598,6 +599,7 @@ export async function run(argv, runtime = {}) {
     const baseUrl = baseUrlFromEnvironment(selectedEnv);
     if (command.definition.generic) {
       const request = parseApiRequestArgs(command.apiArgs);
+      requestMethod = request.method;
       const profileKey = saved.name ?? 'environment';
       const prepared = await prepareGenericRequest({ request, env, stdin, profileKey, configDir: store.configDir, baseUrl });
       if (prepared.dryRun) {
@@ -678,13 +680,16 @@ export async function run(argv, runtime = {}) {
     const details = {};
     if (safeError.details.httpStatus !== undefined) details.httpStatus = safeError.details.httpStatus;
     if (safeError.details.businessCode !== undefined) details.businessCode = safeError.details.businessCode;
+    const transportFailure = ['TIMEOUT', 'NETWORK_ERROR'].includes(safeError.code);
+    const writeOutcomeUnknown = transportFailure && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(requestMethod);
     writeJson(stdout, {
       ok: false,
       command: commandName,
       error: {
         code: safeError.code,
         message: redact(safeError.message, secrets),
-        retryable: ['TIMEOUT', 'NETWORK_ERROR'].includes(safeError.code),
+        retryable: transportFailure && !writeOutcomeUnknown,
+        ...(writeOutcomeUnknown ? { outcomeUnknown: true } : {}),
         ...details,
       },
     });

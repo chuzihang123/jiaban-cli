@@ -38,4 +38,11 @@ jiaban --profile <fixed-profile> api request GET /api/<confirmed-path>
 - Query values use repeated `--query key=value`. JSON uses stdin or an absolute file under the upload root.
 - Files stay inside configured upload/download roots. Binary output always uses absolute `--output`.
 - stdout is one JSON object. Use results only when `ok=true`; never expose absolute output paths.
-- GET/HEAD may re-login once only after a credential-mode 401. Writes and network failures are never replayed.
+- GET/HEAD may re-login once only after a credential-mode 401. Writes are never replayed. A write transport failure returns `retryable=false,outcomeUnknown=true` and must be resolved with an indexed read-only postcondition check.
+
+## Risk enforcement
+
+- R2: every POST/PUT/PATCH/DELETE requires `--dry-run`, current-turn confirmation, `--yes`, and `--reason`.
+- R3/R4: DELETE and indexed state/identity actions additionally require `JIABAN_CLI_DESTRUCTIVE_ENABLED=true` plus the fresh single-use `--plan-id`.
+- Enforced high-risk actions include password/reset, status, permission replacement, approval/rejection, signing, publish, forward/return, recall/revise/regenerate/skip, confirm, todo start/complete, archive/withdraw/replace, member role edits, and customer-owner transfer.
+- GET/HEAD remain reads even when their resource path contains words such as status or archive.

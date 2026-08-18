@@ -14,9 +14,9 @@ description: Handles isolated-test Jiaban P7 senior-manager work with the dedica
 
 ## Workflow
 
-1. Use fixed senior reads only for confirmed IDs inside the authorized subordinate tree.
-2. Otherwise dry-run `jiaban --profile p7 api request GET /api/<confirmed-path> --dry-run` before the matching read.
-3. For a real endpoint that configures or transfers an authorized subordinate object, dry-run the exact request and obtain current-turn confirmation before adding `--yes`.
-4. Status, permissions, archive, transfer, and DELETE require a fresh `--plan-id`.
+1. Load [P7 operations](operations.md), select one `operationId`, and collect every required input.
+2. Use fixed senior reads only for an indexed read and confirmed ID inside the authorized subordinate tree.
+3. Follow [dialog state](../../references/dialog-state.md); writes need current-turn confirmation, and R3/R4 need a fresh `--plan-id`.
+4. Follow [error policy](../../references/error-policy.md); do not improvise an unindexed approval or transfer.
 
-Never broaden team scope or switch to P8/P9 after 401/403. Follow the [CLI contract](../../references/cli-contract.md), [safety policy](../../references/safety-policy.md), and [role map](../../references/role-routing.md).
+Never broaden team scope or switch to P8/P9 after 401/403. Follow the [CLI contract](../../references/cli-contract.md) and [safety policy](../../references/safety-policy.md).

@@ -14,9 +14,9 @@ description: Handles isolated-test Jiaban P9 general-manager work with the dedic
 
 ## Workflow
 
-1. Use fixed customer or contract reads only for a confirmed ID and current request.
-2. Otherwise dry-run `jiaban --profile p9 api request GET /api/<confirmed-path> --dry-run` before the matching read.
-3. For an approval or other write, dry-run the exact scope and obtain current-turn confirmation before adding `--yes`.
-4. Approve, reject, permissions, status, archive, publish, sign, and DELETE require a fresh `--plan-id`.
+1. Load [P9 operations](operations.md), select exactly one `operationId`, and collect every required input.
+2. Use fixed senior reads only when they exactly implement the indexed read and the ID is confirmed.
+3. Follow [dialog state](../../references/dialog-state.md); writes need current-turn confirmation, and R3/R4 need a fresh `--plan-id`.
+4. Follow [error policy](../../references/error-policy.md); known backend contract gaps in the operation index are stop conditions.
 
-Never select P9 merely because another role is ambiguous or returns 401/403. Follow the [CLI contract](../../references/cli-contract.md), [safety policy](../../references/safety-policy.md), and [role map](../../references/role-routing.md).
+Never select P9 merely because another role is ambiguous or returns 401/403. Follow the [CLI contract](../../references/cli-contract.md) and [safety policy](../../references/safety-policy.md).

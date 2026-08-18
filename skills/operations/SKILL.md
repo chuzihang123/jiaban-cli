@@ -15,9 +15,9 @@ description: Handles isolated-test Jiaban product-manager work with the dedicate
 
 ## Workflow
 
-1. Resolve one confirmed product endpoint and dry-run `jiaban --profile operations api request GET /api/<confirmed-path> --dry-run` before a read.
-2. For product configuration or publication writes, dry-run the exact request and obtain current-turn confirmation before adding `--yes`.
-3. Publish, status, archive, replace, approve, reject, and DELETE require a fresh `--plan-id`.
-4. Report only fields needed to answer the product question.
+1. Load [OPERATIONS operations](operations.md), select one `operationId`, and collect every required input.
+2. Follow [dialog state](../../references/dialog-state.md); dry-run the indexed route before reads or writes.
+3. Writes need current-turn confirmation; R3/R4 need a fresh `--plan-id`. Follow [error policy](../../references/error-policy.md).
+4. Report only fields listed by the selected operation and needed for the question.
 
-Never publish from a prior confirmation or switch to an admin role after 401/403. Follow the [CLI contract](../../references/cli-contract.md), [safety policy](../../references/safety-policy.md), and [role map](../../references/role-routing.md).
+Never publish from a prior confirmation or switch to an admin role after 401/403. Follow the [CLI contract](../../references/cli-contract.md) and [safety policy](../../references/safety-policy.md).

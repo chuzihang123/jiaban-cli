@@ -16,9 +16,8 @@ description: Handles isolated-test Jiaban customer-manager work with the dedicat
 ## Workflow
 
 1. Never use the fixed senior customer or contract commands.
-2. Use `jiaban --profile manager api request GET /api/manager/customers/<confirmed-id> --dry-run` for one customer.
-3. Use `/api/manager/customers/<confirmed-id>/contract-flows` for that customer's flows and `/api/manager/contract-flows/<confirmed-id>` for one flow; dry-run before each read.
-4. For a write, dry-run the exact manager route and obtain current-turn confirmation before adding `--yes`.
-5. Use a fresh `--plan-id` for DELETE or high-risk paths.
+2. Load [MANAGER operations](operations.md), select one `operationId`, and collect its required inputs.
+3. Follow [dialog state](../../references/dialog-state.md); dry-run the indexed route before reads or writes.
+4. Writes require current-turn confirmation and `--yes`; R3/R4 require a fresh `--plan-id`. Follow [error policy](../../references/error-policy.md).
 
-Never enumerate customers to discover a target or switch role after 401/403. Follow the [CLI contract](../../references/cli-contract.md), [safety policy](../../references/safety-policy.md), and [role map](../../references/role-routing.md).
+Never enumerate customers to discover a target or switch role after 401/403. Follow the [CLI contract](../../references/cli-contract.md) and [safety policy](../../references/safety-policy.md).

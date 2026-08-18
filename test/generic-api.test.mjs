@@ -79,8 +79,17 @@ test('parser supports six methods, repeated query/header and rejects unsafe comb
   assert.throws(() => parseApiRequestArgs(['GET', '/api/x', '--json-stdin']), /禁止请求body/);
   assert.throws(() => parseApiRequestArgs(['GET', '/api/x', '--multipart']), /禁止请求body/);
   assert.throws(() => parseApiRequestArgs(['POST', '/api/x', '--multipart', '--dry-run', '--reason', 'T-1']), /至少需要/);
-  assert.throws(() => parseApiRequestArgs(['GET', '/api/users/1/status']), /--reason/);
-  assert.equal(parseApiRequestArgs(['GET', '/api/users/1/status', '--dry-run', '--reason', 'T-1']).highRisk, true);
+  assert.equal(parseApiRequestArgs(['GET', '/api/users/1/status']).highRisk, false);
+  for (const pathValue of [
+    '/api/users/1/status', '/api/flows/1/return-four-docs', '/api/flows/1/recall',
+    '/api/flows/1/revise', '/api/flows/1/four-docs/regenerate', '/api/flows/1/payment-voucher/skip',
+    '/api/flows/1/confirm-config', '/api/todos/1/complete', '/api/admin/users/1',
+    '/api/senior/customers/1',
+  ]) {
+    const method = pathValue === '/api/users/1/status' ? 'PUT' : 'POST';
+    const effectiveMethod = ['/api/admin/users/1', '/api/senior/customers/1'].includes(pathValue) ? 'PUT' : method;
+    assert.equal(parseApiRequestArgs([effectiveMethod, pathValue, '--dry-run', '--reason', 'T-1']).highRisk, true, pathValue);
+  }
 });
 
 test('full-access gate, protected headers and write confirmation fail before network', async () => {
@@ -160,14 +169,14 @@ test('high-risk plan binds output target, overwrite and reason without persistin
   for (const [index, variant] of variants.entries()) {
     const configDir = path.join(ROOT, `plan-bind-${index}`);
     const planned = await invoke([
-      'api', 'request', 'GET', '/api/files/1/status', '--output', outputA,
+      'api', 'request', 'POST', '/api/files/1/replace', '--output', outputA,
       '--dry-run', '--reason', 'PLAN-A',
     ], { configDir, env });
     const planId = planned.body.data.planId;
     const planText = await readFile(path.join(configDir, 'plans', `${planId}.json`), 'utf8');
     for (const value of [outputA, outputB, 'PLAN-A', 'PLAN-B']) assert.equal(planText.includes(value), false);
     const execution = await invoke([
-      'api', 'request', 'GET', '/api/files/1/status', ...variant.mutate, '--plan-id', planId,
+      'api', 'request', 'POST', '/api/files/1/replace', ...variant.mutate, '--plan-id', planId,
     ], { configDir, env });
     assert.equal(execution.body.error.code, 'PLAN_INVALID', variant.name);
     assert.equal(execution.calls.length, 0);

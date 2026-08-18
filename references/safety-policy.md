@@ -18,7 +18,9 @@
 1. Construct the exact request with `--dry-run`; this performs zero network activity.
 2. Show only the redacted method, path, scope, and effect. Ask for specific confirmation in the current turn.
 3. After confirmation, repeat the same request with `--yes --reason <test-reason>`.
-4. For DELETE or a high-risk path, also use the current five-minute single-use `--plan-id`.
+4. For R3/R4 actions in the selected role operation index, also use the current five-minute single-use `--plan-id`.
 5. If Profile, method, path, query, headers, body, files, output, overwrite, or reason changes, discard the plan and dry-run again.
 
 Never interpret a prior confirmation, deployment switch, `activeRole`, or available CLI capability as permission for a new write.
+
+If a write returns `outcomeUnknown=true`, never replay it. Perform only the operation index's exact read-only postcondition check or require human log review.

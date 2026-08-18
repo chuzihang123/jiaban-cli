@@ -16,9 +16,8 @@ description: Handles isolated-test Jiaban backend administration and secure setu
 
 1. For explicit administrator initialization in a private one-to-one test conversation, send strict `{phone,password}` JSON to `jiaban admin init` through stdin only. Never put credentials in argv or output.
 2. The command must verify login and `activeRole=WEB_ADMIN` before encrypted Profile `web-admin` becomes active; stop on any failure.
-3. Resolve one exact backend object and confirmed `/api/**` route.
-4. For a read, run `jiaban --profile web-admin api request GET /api/<confirmed-path> --dry-run`, review it, then run the same command without `--dry-run`.
-5. For a write, dry-run the exact request and obtain the user's specific current-turn confirmation before adding `--yes`.
-6. Treat permissions, status changes, password reset, approval, and DELETE as high risk and use the returned single-use `--plan-id`.
+3. Load [WEB_ADMIN operations](operations.md), select exactly one `operationId`, and collect every listed required input before any request.
+4. Follow [dialog state](../../references/dialog-state.md). For a write, dry-run the indexed method/path and obtain specific current-turn confirmation before `--yes`.
+5. R3/R4 operations require the returned single-use `--plan-id`; use [error policy](../../references/error-policy.md) on failure.
 
-Never change roles or broaden user/organization scope after 401/403. Follow the [CLI contract](../../references/cli-contract.md), [safety policy](../../references/safety-policy.md), and [role map](../../references/role-routing.md).
+Never change roles or broaden user/organization scope after 401/403. Follow the [CLI contract](../../references/cli-contract.md) and [safety policy](../../references/safety-policy.md).

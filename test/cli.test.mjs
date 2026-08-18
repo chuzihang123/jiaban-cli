@@ -379,6 +379,20 @@ test('reports timeout as retryable and never leaks a token from network errors',
   assert.equal(network.stdout.includes('socket failed'), false);
 });
 
+test('marks generic write transport failure as outcome unknown and not retryable', async () => {
+  const result = await invoke([
+    'api', 'request', 'POST', '/api/example', '--reason', '当前回合测试确认', '--yes',
+  ], {
+    env: { JIABAN_CLI_FULL_ACCESS_ENABLED: 'true' },
+    fetch: async () => { const error = new Error('aborted'); error.name = 'AbortError'; throw error; },
+  });
+  assert.equal(result.exitCode, 7);
+  assert.equal(result.body.error.code, 'TIMEOUT');
+  assert.equal(result.body.error.retryable, false);
+  assert.equal(result.body.error.outcomeUnknown, true);
+  assert.equal(result.calls.length, 1);
+});
+
 test('rejects redirects without following them', async () => {
   let calls = 0;
   const result = await invoke(['health'], {
