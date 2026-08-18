@@ -6,6 +6,7 @@ const REQUEST_TIMEOUT_MS = 10_000;
 const POSITIVE_ID_PATTERN = /^[1-9]\d*$/;
 const PROFILE_PATTERN = /^[A-Za-z0-9_-]+$/;
 const LOGIN_PATH = '/api/auth/login';
+const DEFAULT_BASE_URL = 'https://wnmsnezogvtm.cloud.zyyc.chat';
 const ACTIVE_ROLES = new Set(['CUSTOMER', 'MANAGER', 'SENIOR_ADMIN', 'SENIOR_MANAGER', 'BRANCH_GENERAL_MANAGER', 'TRUST_SPECIALIST', 'OPERATIONS', 'WEB_ADMIN']);
 
 const COMMANDS = new Map([
@@ -35,7 +36,7 @@ const HELP = {
     'jiaban [--profile <name>] api request METHOD /api/path [options]',
   ],
   environment: [
-    'JIABAN_BASE_URL',
+    `JIABAN_BASE_URL (optional; defaults to ${DEFAULT_BASE_URL})`,
     'JIABAN_SESSION_TOKEN, or JIABAN_INTEGRATION_PHONE + JIABAN_INTEGRATION_PASSWORD (except health)',
     'JIABAN_ACTIVE_ROLE (optional login role; defaults to SENIOR_ADMIN)',
     'JIABAN_CONFIG_DIR (optional absolute test isolation directory)',
@@ -166,8 +167,7 @@ function normalizeOptions(command) {
 }
 
 function baseUrlFromEnvironment(env) {
-  const raw = env.JIABAN_BASE_URL?.trim();
-  if (!raw) throw new CliError('CONFIG_REQUIRED', '缺少环境变量 JIABAN_BASE_URL', 3);
+  const raw = env.JIABAN_BASE_URL?.trim() || DEFAULT_BASE_URL;
 
   let url;
   try {
@@ -624,4 +624,5 @@ export const internals = {
   extractProfile,
   baseUrlFromEnvironment,
   REQUEST_TIMEOUT_MS,
+  DEFAULT_BASE_URL,
 };

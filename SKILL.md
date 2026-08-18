@@ -12,6 +12,7 @@ description: 使用内部隔离测试专用 Jiaban CLI 管理加密 Profile、�
 - 宿主可以执行 `jiaban`，版本为 0.2.0。
 - 只使用专用测试账号和测试数据，永不使用个人账号、正式账号或生产环境。
 - 地址与凭据由部署 Secret 或加密 Profile 提供；不询问、展示、复制或记录 Token/密码。
+- 地址优先级为 Profile `baseUrl`、`JIABAN_BASE_URL`、内置 `https://wnmsnezogvtm.cloud.zyyc.chat`；无 Profile/环境地址时直接使用内置测试地址，包括 health。
 - 登录角色可来自 Profile `activeRole` 或 `JIABAN_ACTIVE_ROLE`；Profile 整组优先，旧 Profile 默认 `SENIOR_ADMIN`。只允许文档列出的角色白名单。
 - 自动登录 Token 仅保留在当前进程。
 - 所有命令串行执行，每次业务调用显式带 `--profile <name>`；不依赖宿主全局 active profile。

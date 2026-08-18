@@ -9,8 +9,9 @@ Jiaban CLI 是家办系统的 Agent 测试适配器。公开仓库 `chuzihang123
 ## 环境要求
 
 - Node.js 20 或更高版本；运行时零第三方依赖。
-- 部署 Secret 可注入 `JIABAN_BASE_URL` 与 `JIABAN_SESSION_TOKEN`。
-- 或注入 `JIABAN_BASE_URL`、`JIABAN_INTEGRATION_PHONE`、`JIABAN_INTEGRATION_PASSWORD`，CLI 自动登录，Token 只保留在当前进程。
+- 未选择 Profile 且未设置 `JIABAN_BASE_URL` 时，默认使用内置测试后端 `https://wnmsnezogvtm.cloud.zyyc.chat`，`health` 也遵循该规则。
+- 部署 Secret 可注入 `JIABAN_BASE_URL` 覆盖内置地址，并提供 `JIABAN_SESSION_TOKEN`。
+- 或注入可选 `JIABAN_BASE_URL`、`JIABAN_INTEGRATION_PHONE`、`JIABAN_INTEGRATION_PASSWORD`，CLI 自动登录，Token 只保留在当前进程。
 - 可选 `JIABAN_ACTIVE_ROLE`：`CUSTOMER`、`MANAGER`、`SENIOR_ADMIN`、`SENIOR_MANAGER`、`BRANCH_GENERAL_MANAGER`、`TRUST_SPECIALIST`、`OPERATIONS`、`WEB_ADMIN`；未设置默认 `SENIOR_ADMIN`。
 - 可选 `JIABAN_CONFIG_DIR` 仅用于测试隔离，且必须是绝对路径。
 - `api request` 必须显式启用 `JIABAN_CLI_FULL_ACCESS_ENABLED=true`；DELETE 或高危路径还必须显式启用 `JIABAN_CLI_DESTRUCTIVE_ENABLED=true`。
@@ -74,7 +75,7 @@ jiaban profile remove test-a
 
 Profile 数据整体使用 AES-256-GCM 加密，随机 32 字节密钥与密文分文件保存在当前用户配置目录；文件权限会尽力设为 `0600`。Windows 默认目录为 `%LOCALAPPDATA%\jiaban-cli`，其他系统为 `~/.config/jiaban-cli`。Token 永不落盘。
 
-Profile 的 `baseUrl`、账号、密码和 `activeRole` 整组优先于同名环境变量；旧 Profile 没有 `activeRole` 时兼容默认 `SENIOR_ADMIN`。`profile list/current` 仍只返回名称和 active 状态。
+后端地址优先级固定为：显式选择或 active Profile 的 `baseUrl` > `JIABAN_BASE_URL` > 内置测试地址。Profile 的地址、账号、密码和 `activeRole` 整组优先于环境变量；旧 Profile 没有 `activeRole` 时兼容默认 `SENIOR_ADMIN`。`profile list/current` 仍只返回名称和 active 状态。
 
 `profile use` 的 active 状态是同一 Agent 宿主上的全局状态，多对话会互相影响。Agent 必须串行执行命令，并在同一对话的每次业务调用中显式写 `--profile <name>`；不要依赖 active profile，也不要并发共享 Profile。
 

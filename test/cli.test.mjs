@@ -95,6 +95,33 @@ test('requires HTTPS except localhost and rejects malicious base URLs', async ()
   assert.equal(internals.baseUrlFromEnvironment({ JIABAN_BASE_URL: 'https://api.example.com' }), 'https://api.example.com');
 });
 
+test('base URL priority is saved profile, explicit environment, then built-in default', async () => {
+  const defaulted = await invoke(['health'], {
+    env: { JIABAN_BASE_URL: '' },
+    data: { status: 'UP', service: 'trust-backend' },
+  });
+  assert.equal(defaulted.calls[0].url, `${internals.DEFAULT_BASE_URL}/api/health`);
+
+  const explicit = await invoke(['health'], {
+    env: { JIABAN_BASE_URL: 'https://explicit-test.example.com' },
+    data: { status: 'UP', service: 'trust-backend' },
+  });
+  assert.equal(explicit.calls[0].url, 'https://explicit-test.example.com/api/health');
+
+  const configDir = path.join(TEST_CONFIG_ROOT, 'base-url-priority');
+  await invoke(['profile', 'save', 'preferred'], {
+    configDir,
+    stdin: JSON.stringify({ baseUrl: 'https://profile-test.example.com', phone: '13800138009', password: 'test-password' }),
+  });
+  await invoke(['profile', 'use', 'preferred'], { configDir });
+  const profiled = await invoke(['health'], {
+    configDir,
+    env: { JIABAN_BASE_URL: 'https://explicit-test.example.com' },
+    data: { status: 'UP', service: 'trust-backend' },
+  });
+  assert.equal(profiled.calls[0].url, 'https://profile-test.example.com/api/health');
+});
+
 test('health is the only command that omits authentication', async () => {
   const health = await invoke(['health'], { data: { status: 'UP', service: 'trust-backend' }, env: { JIABAN_SESSION_TOKEN: '' } });
   assert.equal(health.exitCode, 0);
