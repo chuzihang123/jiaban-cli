@@ -1,28 +1,31 @@
 ---
 name: jiaban-cli
-description: 使用内部测试专用 jiaban CLI 管理加密测试环境 profile，并按明确 ID 查询家办系统。禁止正式环境和对外使用。
+description: 使用内部隔离测试专用 Jiaban CLI 管理加密 Profile、执行最小领域查询，并在双重开关和 dry-run 审核下构造受控 HTTP API 请求。禁止生产和对外使用。
 ---
 
 # Jiaban CLI
 
-仅在用户明确要求内部测试，并且查询范围与当前会话授权一致时使用。正式环境永不调用本 CLI。
+仅在用户当前回合明确要求内部隔离测试，且范围与当前会话授权一致时使用。公开仓库只提供固定版本安装包，不代表允许生产使用。本 Skill 不授予权限；后端角色、租户和数据范围始终生效。
 
 ## 前置条件
 
-- 宿主必须能够执行 `jiaban` 命令。
-- 地址、账号、密码优先由 Agent 部署 Secret 注入，严禁让用户在聊天中发送这些值。
-- 仅使用专用测试账号；严禁个人账号和正式环境账号。
-- 自动登录 Token 只保留在当前 CLI 进程；不询问、展示、复制或记录 Token。
-- 本技能不会授予任何权限，后端仍按会话的角色与数据范围鉴权。
+- 宿主可以执行 `jiaban`，版本为 0.2.0。
+- 只使用专用测试账号和测试数据，永不使用个人账号、正式账号或生产环境。
+- 地址与凭据由部署 Secret 或加密 Profile 提供；不询问、展示、复制或记录 Token/密码。
+- 登录角色可来自 Profile `activeRole` 或 `JIABAN_ACTIVE_ROLE`；Profile 整组优先，旧 Profile 默认 `SENIOR_ADMIN`。只允许文档列出的角色白名单。
+- 自动登录 Token 仅保留在当前进程。
+- 所有命令串行执行，每次业务调用显式带 `--profile <name>`；不依赖宿主全局 active profile。
+- 通用请求要求 `JIABAN_CLI_FULL_ACCESS_ENABLED=true`；DELETE 或高危路径还要求 `JIABAN_CLI_DESTRUCTIVE_ENABLED=true`。
+- 文件请求要求预先配置绝对路径 `JIABAN_CLI_UPLOAD_ROOT`、`JIABAN_CLI_DOWNLOAD_ROOT`。
 
-## 允许的命令
+## 优先使用最小领域命令
 
 ```text
-jiaban health
-jiaban auth status
-jiaban customer get --id <正整数客户ID>
-jiaban contract list --customer-id <正整数客户ID>
-jiaban contract status --id <正整数流程ID>
+jiaban --profile <name> health
+jiaban --profile <name> auth status
+jiaban --profile <name> customer get --id <正整数客户ID>
+jiaban --profile <name> contract list --customer-id <正整数客户ID>
+jiaban --profile <name> contract status --id <正整数流程ID>
 jiaban profile save <name>       # stdin 单个 JSON，禁止 password flag
 jiaban profile use <name>
 jiaban profile current
@@ -30,25 +33,58 @@ jiaban profile list
 jiaban profile remove <name>
 ```
 
-不得拼接或尝试其他子命令。尤其禁止任意 HTTP/API 命令、登录、创建、修改、审批、上传和删除操作。
+能由最小领域命令完成时，不使用 `api request`。查询客户或流程只使用用户明确提供的 ID；没有 ID 时停止并请求该 ID，不扫描或枚举其他客户。
+
+## 高级 api request
+
+```text
+jiaban --profile <name> api request <METHOD> <PATH> [options]
+```
+
+允许 `GET`、`HEAD`、`POST`、`PUT`、`PATCH`、`DELETE`。禁止 WebSocket、`CONNECT`、`TRACE`、`OPTIONS`。PATH 必须是 `/api/` 开头的安全相对路径；query 只通过 `--query key=value` 传入。认证 Header 由 CLI 注入，禁止用户提供 Token、Cookie、Host、代理/转发 Header 或 CR/LF。
+
+请求体按需选择且互斥：`--json-stdin`、`--json-file <绝对路径>`、`--body-file ... --content-type ...`、`--form`、`--multipart` 配合 `--form/--json-part/--upload`。上传语法为 `field=绝对路径`，按安全扩展名推断 MIME；严格端点可用 `field=绝对路径;type=application/pdf` 显式指定安全 MIME，重复 field 可用。JSON 正文必须来自 stdin 或受控文件，不放在命令行。GET/HEAD 不带 body。下载使用绝对 `--output`，覆盖普通文件必须显式 `--overwrite`。上传/请求体文件不得越过 `JIABAN_CLI_UPLOAD_ROOT`，下载不得越过 `JIABAN_CLI_DOWNLOAD_ROOT`；不得访问或覆盖目录、符号链接、junction/reparse point。
+
+仓库静态盘点的 247 个 HTTP 端点具备请求构造覆盖；WebSocket 不包含在 247 内。该数字不代表当前 Profile 有权访问，也不代表端点成功、业务正确或副作用已获授权。
+
+## 强制 dry-run plan
+
+每次 `api request` 先执行完全相同参数的 `--dry-run`：
+
+```text
+jiaban --profile test-a api request GET /api/todos --query status=PENDING --dry-run
+```
+
+1. 检查返回 `ok=true`，并审阅脱敏摘要的 method、path、query/Header 名称、body 模式、文件字段名/大小/SHA-256。
+2. plan 不联网，也不得包含正文、Header 值、凭据或 Token。
+3. 普通请求审阅后移除 `--dry-run`；写请求增加 `--yes`。高危请求还必须使用 dry-run 返回的 `--plan-id`，且不得改变输出目标、overwrite 或 reason。
+4. method、path、Profile、query、body、文件、输出、确认或 reason 任一变化，都要重新 dry-run。
+
+不得跳过 plan、把旧 plan 用于新请求、并发执行、自动补确认或自行扩大请求范围。
+
+## 写操作规则
+
+- 所有通用请求要求 `JIABAN_CLI_FULL_ACCESS_ENABLED=true`。
+- POST/PUT/PATCH 必须有 `--yes --reason <内部测试原因或工单>`。
+- DELETE 及路径含 reset-password/status/permissions/approve/reject/sign/publish/forward/archive/withdraw/replace 等高危词的请求，必须额外有 `JIABAN_CLI_DESTRUCTIVE_ENABLED=true`；先 dry-run 获取 5 分钟、单次使用且绑定 Profile/method/path/body/文件哈希的 plan，再用 `--yes --plan-id <id> --reason ...` 执行。
+- 只有用户在当前回合明确提出具体写目标时才能执行；环境开关、历史同意和 dry-run 都不能代替当前授权。
+- 写请求永不自动重试。任何 401/403 立即停止，不切换身份、不绕过权限。
 
 ## 调用规则
 
-1. 用户说“保存测试环境 X”时，仅在私聊且用户明确接受聊天留存密码风险后，将单个 `{baseUrl,phone,password}` JSON 通过 stdin 交给 `profile save X`；不得把 password 放进命令参数。
-2. 用户说“切换到 test-a”时，可以执行 `profile use test-a`，但必须提醒 active profile 是单宿主全局状态，会影响其他聊天。
-3. 更安全的对话隔离方式：在该对话后续每一次业务调用都显式添加 `--profile test-a`。CLI 不会为对话保存临时选择；新对话不能继承聊天语义。
-4. “当前环境”映射 `profile current`；“环境列表”映射 `profile list`；“删除环境”映射 `profile remove <name>`。列表只返回名称和 active，不尝试获取 URL/账号。
-5. 查询客户时只使用用户明确给出的客户 ID；没有 ID 时停止并请用户提供，不得先下载客户列表或按手机号扫描。
-6. 不扩大查询范围。用户只问一个客户或流程时，不要汇总其他客户数据。命令必须串行执行。
-7. 每次只执行完成当前问题所需的最少命令。
-8. stdout 是单个 JSON 对象。仅当 `ok` 为 `true` 时使用 `data`；`ok` 为 `false` 时读取 `error.code` 与脱敏后的 `error.message`。
-9. 退出码 `4` 表示认证或授权失败，应停止并检查专用测试账号；不得改用个人账号。
-10. `TIMEOUT` 或 `NETWORK_ERROR` 仅可在用户仍等待且操作安全时重试一次；其他错误不要自动重试。
-11. 回复飞书群聊时保持数据最小化。手机号已经掩码，仍不要转发与问题无关的数据。
+1. 保存 Profile 时，仅在私聊且用户明确接受聊天留存风险后，将单个 `{baseUrl,phone,password}` JSON 通过 stdin 交给 `profile save`；不得把 password 放进参数。
+2. `profile use` 会修改同一宿主的全局 active 状态。业务命令仍必须显式 `--profile`，以隔离不同对话。
+3. 每次只执行完成当前问题所需的最少命令，严格限制 ID、路径、query、文件和输出范围。
+4. 写请求的 401 或网络失败绝不重放。GET/HEAD 只在账号密码模式的首次 401 时允许 CLI 重新登录并重试一次；不做一般网络重试。
+5. 不跟随重定向，不调用 `/api/auth/login` 通用入口，不尝试 WebSocket。
+6. stdout 是单个 JSON。仅当 `ok=true` 时使用结果；失败只读取脱敏后的 `error.code`、`error.message` 和允许的状态信息。
+7. JSON 下载先校验 HTTP 与业务码，失败时不得产生文件；成功文件结果只报告 basename、字节数和 SHA-256。不得把绝对输出路径写回聊天。
+8. 回复群聊时数据最小化。不得转发无关字段、原始响应、凭据、请求正文或文件内容。
 
 ## 结果表达
 
-- 健康检查只说明服务进程是否响应，不推断数据库或其他依赖一定健康。
-- 客户查询未找到时，直接说明未找到，不搜索其他客户，也不猜测客户身份。
-- 合同状态以 `status`、`currentFlowNodeName` 和 `processActive` 为准；不根据缺失字段自行推断审批结论。
-- 不向用户输出原始 JSON，除非用户明确要求机器可读结果。
+- 健康检查只说明服务进程响应，不推断数据库或依赖一定健康。
+- 未找到时直接说明未找到，不搜索其他对象或猜测身份。
+- 合同状态以返回的 `status`、`currentFlowNodeName`、`processActive` 为准。
+- 上传/下载结果只报告必要的路径 basename、字节数和校验值，不披露 root 或其他文件。
+- 不向用户输出原始 JSON，除非用户明确要求机器可读结果且内容已经脱敏。

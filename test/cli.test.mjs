@@ -174,6 +174,26 @@ test('session token has priority and never triggers credential login', async () 
   assert.deepEqual(result.calls[0].init.headers, { trust_token: 'priority-session' });
 });
 
+test('environment activeRole is validated and sent by credential login', async () => {
+  const result = await invoke(['auth', 'status'], {
+    env: {
+      JIABAN_SESSION_TOKEN: '', JIABAN_INTEGRATION_PHONE: '13800138009',
+      JIABAN_INTEGRATION_PASSWORD: 'role-password', JIABAN_ACTIVE_ROLE: 'TRUST_SPECIALIST',
+    },
+    fetch: async (url, init) => {
+      if (String(url).endsWith('/api/auth/login')) {
+        assert.equal(JSON.parse(init.body).activeRole, 'TRUST_SPECIALIST');
+        return jsonResponse(200, { code: 200, data: { tokenValue: 'role-token' } });
+      }
+      return jsonResponse(200, { code: 200, data: authStatusData() });
+    },
+  });
+  assert.equal(result.exitCode, 0);
+  const invalid = await invoke(['auth', 'status'], { env: { JIABAN_ACTIVE_ROLE: 'ROOT' } });
+  assert.equal(invalid.body.error.code, 'INVALID_ACTIVE_ROLE');
+  assert.equal(invalid.calls.length, 0);
+});
+
 test('credential mode re-authenticates and retries a business GET only once', async () => {
   let loginCount = 0;
   let getCount = 0;
@@ -346,6 +366,7 @@ test('encrypts saved profiles, separates the key, and manages active state witho
     baseUrl: 'http://127.0.0.1:8123',
     phone: '13800138009',
     password: 'Encrypted-Test-Password!',
+    activeRole: 'MANAGER',
   };
   const saved = await invoke(['profile', 'save', 'test-a'], {
     configDir,
@@ -377,9 +398,13 @@ test('encrypts saved profiles, separates the key, and manages active state witho
 
   const business = await invoke(['auth', 'status'], {
     configDir,
-    fetch: async (url) => String(url).endsWith('/api/auth/login')
-      ? jsonResponse(200, { code: 200, data: { tokenValue: 'profile-memory-token' } })
-      : jsonResponse(200, { code: 200, data: authStatusData() }),
+    fetch: async (url, init) => {
+      if (String(url).endsWith('/api/auth/login')) {
+        assert.equal(JSON.parse(init.body).activeRole, 'MANAGER');
+        return jsonResponse(200, { code: 200, data: { tokenValue: 'profile-memory-token' } });
+      }
+      return jsonResponse(200, { code: 200, data: authStatusData() });
+    },
   });
   assert.equal(business.calls[0].url, 'http://127.0.0.1:8123/api/auth/login');
   assert.deepEqual(business.calls[1].init.headers, { trust_token: 'profile-memory-token' });
@@ -417,6 +442,11 @@ test('rejects invalid profile stdin, relative config paths, and damaged encrypte
   const invalidInput = await invoke(['profile', 'save', 'test-a'], { stdin: '{bad json' });
   assert.equal(invalidInput.exitCode, 2);
   assert.equal(invalidInput.body.error.code, 'INVALID_PROFILE_INPUT');
+
+  const invalidRole = await invoke(['profile', 'save', 'test-role'], {
+    stdin: JSON.stringify({ baseUrl: 'http://127.0.0.1:8300', phone: '13800138009', password: 'test', activeRole: 'ROOT' }),
+  });
+  assert.equal(invalidRole.body.error.code, 'INVALID_PROFILE_INPUT');
 
   const relative = await invoke(['profile', 'list'], { env: { JIABAN_CONFIG_DIR: 'relative/path' } });
   assert.equal(relative.exitCode, 3);

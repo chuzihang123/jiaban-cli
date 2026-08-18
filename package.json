@@ -1,7 +1,7 @@
 {
   "name": "@jiaban/cli",
-  "version": "0.1.0",
-  "description": "Internal-test-only read-only CLI adapter for Jiaban agents",
+  "version": "0.2.0",
+  "description": "Internal-isolated-test-only CLI adapter for Jiaban agents",
   "type": "module",
   "bin": {
     "jiaban": "./bin/jiaban.mjs"
@@ -17,7 +17,7 @@
   },
   "scripts": {
     "test": "node --test",
-    "check": "node --check bin/jiaban.mjs && node --check src/cli.mjs && node --check src/profile-store.mjs && node --check test/cli.test.mjs",
+    "check": "node --check bin/jiaban.mjs && node --check src/cli.mjs && node --check src/profile-store.mjs && node --check src/generic-api.mjs && node --check test/cli.test.mjs && node --check test/generic-api.test.mjs",
     "pack:check": "npm pack --dry-run"
   },
   "license": "UNLICENSED",

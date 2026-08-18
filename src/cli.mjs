@@ -1,10 +1,12 @@
 import { ProfileStore, ProfileStoreError, resolveConfigDir } from './profile-store.mjs';
+import { GenericApiError, appendAudit, executeGenericRequest, parseApiRequestArgs, prepareGenericRequest } from './generic-api.mjs';
 
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 const REQUEST_TIMEOUT_MS = 10_000;
 const POSITIVE_ID_PATTERN = /^[1-9]\d*$/;
 const PROFILE_PATTERN = /^[A-Za-z0-9_-]+$/;
 const LOGIN_PATH = '/api/auth/login';
+const ACTIVE_ROLES = new Set(['CUSTOMER', 'MANAGER', 'SENIOR_ADMIN', 'SENIOR_MANAGER', 'BRANCH_GENERAL_MANAGER', 'TRUST_SPECIALIST', 'OPERATIONS', 'WEB_ADMIN']);
 
 const COMMANDS = new Map([
   ['health', { path: '/api/health', auth: false, options: [] }],
@@ -17,6 +19,7 @@ const COMMANDS = new Map([
   ['profile current', { local: true, nameArgument: false }],
   ['profile list', { local: true, nameArgument: false }],
   ['profile remove', { local: true, nameArgument: true }],
+  ['api request', { generic: true }],
 ]);
 
 const HELP = {
@@ -29,11 +32,16 @@ const HELP = {
     'jiaban contract status --id <flowId>',
     'jiaban profile save <name>  # JSON credentials from stdin only',
     'jiaban profile use|current|list|remove',
+    'jiaban [--profile <name>] api request METHOD /api/path [options]',
   ],
   environment: [
     'JIABAN_BASE_URL',
     'JIABAN_SESSION_TOKEN, or JIABAN_INTEGRATION_PHONE + JIABAN_INTEGRATION_PASSWORD (except health)',
+    'JIABAN_ACTIVE_ROLE (optional login role; defaults to SENIOR_ADMIN)',
     'JIABAN_CONFIG_DIR (optional absolute test isolation directory)',
+    'JIABAN_CLI_FULL_ACCESS_ENABLED=true (required for api request)',
+    'JIABAN_CLI_DESTRUCTIVE_ENABLED=true (required for high-risk api request)',
+    'JIABAN_CLI_UPLOAD_ROOT / JIABAN_CLI_DOWNLOAD_ROOT (absolute file roots)',
   ],
 };
 
@@ -122,6 +130,7 @@ function parseCommand(argv) {
   if (!definition) usageError(`未知命令：${name || '(空)'}`);
 
   const optionTokens = argv.slice(isSingleWord ? 1 : 2);
+  if (definition.generic) return { name, definition, apiArgs: optionTokens, options: {} };
   if (definition.local) {
     if (definition.nameArgument) {
       if (optionTokens.length !== 1 || !PROFILE_PATTERN.test(optionTokens[0])) {
@@ -178,8 +187,10 @@ function baseUrlFromEnvironment(env) {
 }
 
 function authFromEnvironment(env) {
+  const activeRole = env.JIABAN_ACTIVE_ROLE?.trim() || 'SENIOR_ADMIN';
+  if (!ACTIVE_ROLES.has(activeRole)) throw new CliError('INVALID_ACTIVE_ROLE', 'JIABAN_ACTIVE_ROLE 不在允许范围内', 3);
   const sessionToken = env.JIABAN_SESSION_TOKEN?.trim();
-  if (sessionToken) return { mode: 'session', token: sessionToken };
+  if (sessionToken) return { mode: 'session', token: sessionToken, activeRole };
 
   const phone = env.JIABAN_INTEGRATION_PHONE?.trim();
   const password = env.JIABAN_INTEGRATION_PASSWORD;
@@ -190,7 +201,7 @@ function authFromEnvironment(env) {
       3,
     );
   }
-  return { mode: 'credentials', phone, password };
+  return { mode: 'credentials', phone, password, activeRole };
 }
 
 function environmentFromSavedProfile(profile) {
@@ -198,6 +209,7 @@ function environmentFromSavedProfile(profile) {
     JIABAN_BASE_URL: profile.baseUrl,
     JIABAN_INTEGRATION_PHONE: profile.phone,
     JIABAN_INTEGRATION_PASSWORD: profile.password,
+    JIABAN_ACTIVE_ROLE: profile.activeRole ?? 'SENIOR_ADMIN',
   };
 }
 
@@ -216,16 +228,17 @@ async function readProfileInput(stdin) {
     throw new CliError('INVALID_PROFILE_INPUT', 'stdin 必须是单个 JSON 对象', 2);
   }
   const keys = Object.keys(value ?? {}).sort();
-  if (!value || Array.isArray(value) || keys.join(',') !== 'baseUrl,password,phone') {
-    throw new CliError('INVALID_PROFILE_INPUT', 'profile JSON 仅允许 baseUrl、phone、password', 2);
+  if (!value || Array.isArray(value) || !['baseUrl,password,phone', 'activeRole,baseUrl,password,phone'].includes(keys.join(','))) {
+    throw new CliError('INVALID_PROFILE_INPUT', 'profile JSON 仅允许 baseUrl、phone、password 和可选 activeRole', 2);
   }
   if (typeof value.baseUrl !== 'string' || value.baseUrl.length > 2048
     || typeof value.phone !== 'string' || !/^1[3-9]\d{9}$/.test(value.phone)
-    || typeof value.password !== 'string' || value.password.trim().length < 1 || value.password.length > 256) {
+    || typeof value.password !== 'string' || value.password.trim().length < 1 || value.password.length > 256
+    || (value.activeRole !== undefined && (typeof value.activeRole !== 'string' || !ACTIVE_ROLES.has(value.activeRole)))) {
     throw new CliError('INVALID_PROFILE_INPUT', 'profile 字段格式或长度无效', 2);
   }
   const baseUrl = baseUrlFromEnvironment({ JIABAN_BASE_URL: value.baseUrl });
-  return { baseUrl, phone: value.phone, password: value.password };
+  return { baseUrl, phone: value.phone, password: value.password, activeRole: value.activeRole ?? 'SENIOR_ADMIN' };
 }
 
 async function executeProfileCommand(command, store, stdin) {
@@ -302,12 +315,12 @@ async function performJsonRequest({ baseUrl, path, method, token, requestBody, f
   return { response, body };
 }
 
-async function loginWithCredentials({ baseUrl, phone, password, fetchImpl, secrets }) {
+async function loginWithCredentials({ baseUrl, phone, password, activeRole, fetchImpl, secrets }) {
   const { response, body } = await performJsonRequest({
     baseUrl,
     path: LOGIN_PATH,
     method: 'POST',
-    requestBody: { phone, password, clientType: 'cli', activeRole: 'SENIOR_ADMIN' },
+    requestBody: { phone, password, clientType: 'cli', activeRole },
     fetchImpl,
     secrets,
   });
@@ -507,6 +520,45 @@ export async function run(argv, runtime = {}) {
     const saved = await store.selected(profile);
     const selectedEnv = saved.profile ? environmentFromSavedProfile(saved.profile) : env;
     const baseUrl = baseUrlFromEnvironment(selectedEnv);
+    if (command.definition.generic) {
+      const request = parseApiRequestArgs(command.apiArgs);
+      const profileKey = saved.name ?? 'environment';
+      const prepared = await prepareGenericRequest({ request, env, stdin, profileKey, configDir: store.configDir, baseUrl });
+      if (prepared.dryRun) {
+        await appendAudit({ ...prepared.audit, outcome: prepared.planId ? 'plan-created' : 'dry-run' });
+        writeJson(stdout, { ok: true, command: command.name, data: { dryRun: true, planId: prepared.planId, request: prepared.summary } });
+        return 0;
+      }
+      const auth = authFromEnvironment(selectedEnv);
+      secrets = [auth?.token, auth?.phone, auth?.password].filter(Boolean);
+      let token = auth.token ?? null;
+      if (auth.mode === 'credentials') {
+        token = await loginWithCredentials({ baseUrl, phone: auth.phone, password: auth.password, activeRole: auth.activeRole, fetchImpl, secrets });
+        secrets.push(token);
+      }
+      await appendAudit({ ...prepared.audit, outcome: 'attempt' });
+      let response;
+      try {
+        response = await executeGenericRequest({ prepared, baseUrl, token, fetchImpl, secrets });
+      } catch (error) {
+        if (auth.mode === 'credentials' && ['GET', 'HEAD'].includes(request.method) && error?.code === 'UNAUTHENTICATED') {
+          token = await loginWithCredentials({ baseUrl, phone: auth.phone, password: auth.password, activeRole: auth.activeRole, fetchImpl, secrets });
+          secrets.push(token);
+          try {
+            response = await executeGenericRequest({ prepared, baseUrl, token, fetchImpl, secrets });
+          } catch (retryError) {
+            await appendAudit({ ...prepared.audit, outcome: retryError?.code ?? 'error' });
+            throw retryError;
+          }
+        } else {
+          await appendAudit({ ...prepared.audit, outcome: error?.code ?? 'error' });
+          throw error;
+        }
+      }
+      await appendAudit({ ...prepared.audit, outcome: 'success' });
+      writeJson(stdout, { ok: true, command: command.name, response });
+      return 0;
+    }
     const auth = command.definition.auth ? authFromEnvironment(selectedEnv) : null;
     secrets = [auth?.token, auth?.phone, auth?.password].filter(Boolean);
     let token = auth?.token ?? null;
@@ -515,6 +567,7 @@ export async function run(argv, runtime = {}) {
         baseUrl,
         phone: auth.phone,
         password: auth.password,
+        activeRole: auth.activeRole,
         fetchImpl,
         secrets,
       });
@@ -532,6 +585,7 @@ export async function run(argv, runtime = {}) {
         baseUrl,
         phone: auth.phone,
         password: auth.password,
+        activeRole: auth.activeRole,
         fetchImpl,
         secrets,
       });
@@ -541,7 +595,7 @@ export async function run(argv, runtime = {}) {
     writeJson(stdout, { ok: true, command: command.name, data: resultForCommand(command.name, data, options) });
     return 0;
   } catch (error) {
-    const safeError = error instanceof CliError || error instanceof ProfileStoreError
+    const safeError = error instanceof CliError || error instanceof ProfileStoreError || error instanceof GenericApiError
       ? error
       : new CliError('INTERNAL_ERROR', redact(error?.message || '内部错误', secrets), 1);
     const details = {};
