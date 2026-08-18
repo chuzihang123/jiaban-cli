@@ -1,0 +1,7 @@
+node_modules/
+coverage/
+*.tgz
+*.tgz.sha256
+.env
+.env.*
+!.env.example
