@@ -1,5 +1,6 @@
 node_modules/
 coverage/
+internal-test-profile.json
 *.tgz
 *.tgz.sha256
 .env

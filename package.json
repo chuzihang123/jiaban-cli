@@ -1,6 +1,6 @@
 {
   "name": "@jiaban/cli",
-  "version": "0.3.0",
+  "version": "0.3.1-internal.1",
   "description": "Internal-isolated-test-only Jiaban role skill pack and shared CLI adapter",
   "type": "module",
   "bin": {
@@ -11,6 +11,7 @@
     "src",
     "skills",
     "references",
+    "internal-test-profile.json",
     "README.md",
     "SKILL.md"
   ],
@@ -19,7 +20,7 @@
   },
   "scripts": {
     "test": "node --test",
-    "check": "node --check bin/jiaban.mjs && node --check src/cli.mjs && node --check src/profile-store.mjs && node --check src/generic-api.mjs && node --check test/cli.test.mjs && node --check test/generic-api.test.mjs && node --check test/skill-pack.test.mjs",
+    "check": "node --check bin/jiaban.mjs && node --check src/cli.mjs && node --check src/profile-store.mjs && node --check src/generic-api.mjs && node --check src/bundled-profile.mjs && node --check test/cli.test.mjs && node --check test/generic-api.test.mjs && node --check test/skill-pack.test.mjs && node --check test/bundled-profile.test.mjs",
     "pack:check": "npm pack --dry-run"
   },
   "license": "UNLICENSED",

@@ -1,7 +1,8 @@
 import { ProfileStore, ProfileStoreError, resolveConfigDir } from './profile-store.mjs';
 import { GenericApiError, appendAudit, executeGenericRequest, parseApiRequestArgs, prepareGenericRequest } from './generic-api.mjs';
+import { BundledProfileError, loadBundledTestProfile } from './bundled-profile.mjs';
 
-const VERSION = '0.3.0';
+const VERSION = '0.3.1-internal.1';
 const REQUEST_TIMEOUT_MS = 10_000;
 const POSITIVE_ID_PATTERN = /^[1-9]\d*$/;
 const PROFILE_PATTERN = /^[A-Za-z0-9_-]+$/;
@@ -43,6 +44,7 @@ const HELP = {
     'JIABAN_CLI_FULL_ACCESS_ENABLED=true (required for api request)',
     'JIABAN_CLI_DESTRUCTIVE_ENABLED=true (required for high-risk api request)',
     'JIABAN_CLI_UPLOAD_ROOT / JIABAN_CLI_DOWNLOAD_ROOT (absolute file roots)',
+    'Authorized private Release may use a bundled-private-test auth fallback',
   ],
 };
 
@@ -201,6 +203,9 @@ function authFromEnvironment(env) {
       3,
     );
   }
+  if (!/^1[3-9]\d{9}$/.test(phone) || password.length > 256) {
+    throw new CliError('AUTH_INVALID', '测试集成账号环境变量格式无效', 3);
+  }
   return { mode: 'credentials', phone, password, activeRole };
 }
 
@@ -210,6 +215,20 @@ function environmentFromSavedProfile(profile) {
     JIABAN_INTEGRATION_PHONE: profile.phone,
     JIABAN_INTEGRATION_PASSWORD: profile.password,
     JIABAN_ACTIVE_ROLE: profile.activeRole ?? 'SENIOR_ADMIN',
+  };
+}
+
+function hasConfiguredEnvironmentAuth(env) {
+  return ['JIABAN_SESSION_TOKEN', 'JIABAN_INTEGRATION_PHONE', 'JIABAN_INTEGRATION_PASSWORD', 'JIABAN_ACTIVE_ROLE']
+    .some((key) => typeof env[key] === 'string' && env[key].trim().length > 0);
+}
+
+function environmentFromBundledProfile(profile) {
+  return {
+    JIABAN_BASE_URL: profile.baseUrl,
+    JIABAN_INTEGRATION_PHONE: profile.phone,
+    JIABAN_INTEGRATION_PASSWORD: profile.password,
+    JIABAN_ACTIVE_ROLE: profile.activeRole,
   };
 }
 
@@ -518,18 +537,28 @@ export async function run(argv, runtime = {}) {
 
     const options = normalizeOptions(command);
     const saved = await store.selected(profile);
-    const selectedEnv = saved.profile ? environmentFromSavedProfile(saved.profile) : env;
+    let bundledProfile = null;
+    if (!saved.profile && command.name !== 'health' && !hasConfiguredEnvironmentAuth(env)) {
+      bundledProfile = await loadBundledTestProfile(runtime.bundledProfilePath);
+    }
+    const selectedEnv = saved.profile
+      ? environmentFromSavedProfile(saved.profile)
+      : (bundledProfile ? environmentFromBundledProfile(bundledProfile) : env);
     const baseUrl = baseUrlFromEnvironment(selectedEnv);
     if (command.definition.generic) {
       const request = parseApiRequestArgs(command.apiArgs);
-      const profileKey = saved.name ?? 'environment';
-      const prepared = await prepareGenericRequest({ request, env, stdin, profileKey, configDir: store.configDir, baseUrl });
+      const profileKey = saved.name ?? bundledProfile?.source ?? 'environment';
+      const capabilityEnv = bundledProfile?.fullAccess
+        ? { ...env, JIABAN_CLI_FULL_ACCESS_ENABLED: 'true' }
+        : env;
+      const prepared = await prepareGenericRequest({ request, env: capabilityEnv, stdin, profileKey, configDir: store.configDir, baseUrl });
       if (prepared.dryRun) {
         await appendAudit({ ...prepared.audit, outcome: prepared.planId ? 'plan-created' : 'dry-run' });
         writeJson(stdout, { ok: true, command: command.name, data: { dryRun: true, planId: prepared.planId, request: prepared.summary } });
         return 0;
       }
       const auth = authFromEnvironment(selectedEnv);
+      if (bundledProfile) auth.source = bundledProfile.source;
       secrets = [auth?.token, auth?.phone, auth?.password].filter(Boolean);
       let token = auth.token ?? null;
       if (auth.mode === 'credentials') {
@@ -560,6 +589,7 @@ export async function run(argv, runtime = {}) {
       return 0;
     }
     const auth = command.definition.auth ? authFromEnvironment(selectedEnv) : null;
+    if (auth && bundledProfile) auth.source = bundledProfile.source;
     secrets = [auth?.token, auth?.phone, auth?.password].filter(Boolean);
     let token = auth?.token ?? null;
     if (auth?.mode === 'credentials') {
@@ -592,10 +622,12 @@ export async function run(argv, runtime = {}) {
       secrets.push(token);
       data = await requestData({ baseUrl, path, token, fetchImpl, secrets });
     }
-    writeJson(stdout, { ok: true, command: command.name, data: resultForCommand(command.name, data, options) });
+    const result = resultForCommand(command.name, data, options);
+    if (command.name === 'auth status' && auth?.source === 'bundled-private-test') result.authSource = auth.source;
+    writeJson(stdout, { ok: true, command: command.name, data: result });
     return 0;
   } catch (error) {
-    const safeError = error instanceof CliError || error instanceof ProfileStoreError || error instanceof GenericApiError
+    const safeError = error instanceof CliError || error instanceof ProfileStoreError || error instanceof GenericApiError || error instanceof BundledProfileError
       ? error
       : new CliError('INTERNAL_ERROR', redact(error?.message || '内部错误', secrets), 1);
     const details = {};
@@ -625,4 +657,5 @@ export const internals = {
   baseUrlFromEnvironment,
   REQUEST_TIMEOUT_MS,
   DEFAULT_BASE_URL,
+  hasConfiguredEnvironmentAuth,
 };

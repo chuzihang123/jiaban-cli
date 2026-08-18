@@ -147,8 +147,19 @@ test('skills contain no credential payloads, profile provisioning, or implicit-p
 
 test('package allowlist includes shared CLI and the complete skill pack', async () => {
   const pkg = JSON.parse(await readFile(path.join(ROOT, 'package.json'), 'utf8'));
-  assert.equal(pkg.version, '0.3.0');
+  assert.equal(pkg.version, '0.3.1-internal.1');
   assert.equal(pkg.private, true);
-  for (const entry of ['bin', 'src', 'skills', 'references', 'README.md', 'SKILL.md']) assert.ok(pkg.files.includes(entry));
+  for (const entry of ['bin', 'src', 'skills', 'references', 'internal-test-profile.json', 'README.md', 'SKILL.md']) assert.ok(pkg.files.includes(entry));
   assert.equal(pkg.dependencies, undefined);
+});
+
+test('source tree carries only a safe bundled-profile example and ignores the runtime secret file', async () => {
+  const ignore = await readFile(path.join(ROOT, '.gitignore'), 'utf8');
+  assert.match(ignore, /^internal-test-profile\.json$/m);
+  const example = await readFile(path.join(ROOT, 'internal-test-profile.example.json'), 'utf8');
+  assert.doesNotMatch(example, /1[3-9]\d{9}/);
+  assert.match(example, /REPLACE_IN_PRIVATE_BUILD/);
+  const pkg = JSON.parse(await readFile(path.join(ROOT, 'package.json'), 'utf8'));
+  assert.ok(pkg.files.includes('internal-test-profile.json'));
+  assert.equal(pkg.files.includes('internal-test-profile.example.json'), false);
 });

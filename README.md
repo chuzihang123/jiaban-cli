@@ -2,9 +2,9 @@
 
 > **Internal isolated testing only：仅用于隔离的内部测试环境，禁止连接生产环境，禁止发布 npm，禁止把它作为面向客户的产品或通用运维工具。**
 
-Jiaban CLI 是家办系统的 Agent 测试适配器。公开仓库 `chuzihang123/jiaban-cli` 仅用于匿名下载经过固定版本和 SHA-256 校验的 Release 包；仓库公开不代表软件可用于生产、对外服务或绕过后端权限。
+Jiaban CLI 是家办系统的 Agent 测试适配器。私有仓库 `chuzihang123/jiaban-cli` 仅向已授权的内部测试人员提供固定版本 Release；仓库和包都不得转发、复制到未授权宿主、用于生产或绕过后端权限。
 
-0.3.0 在受控 CLI 上增加一个总路由 Skill 和八个角色 Skill。总 Skill 根据自然语言、目标业务和明确角色选择唯一子 Skill；无法唯一识别时必须澄清，不能自动选择更高权限角色。CLI 继续支持健康检查、最小领域命令和受控的 `api request`，WebSocket 不在支持范围内。
+0.3.1-internal.1 在九个角色路由 Skill 和受控 CLI 上增加私有 Release 专用的 bundled WEB_ADMIN 测试 Profile fallback。公开源码和 Git commit 不携带真实配置；只有受控私有构建产物可包含它。
 
 ## 环境要求
 
@@ -21,25 +21,13 @@ Jiaban CLI 是家办系统的 Agent 测试适配器。公开仓库 `chuzihang123
 
 ## 安装
 
-标准内部安装方式是从公开 GitHub Release 匿名安装固定版本包。目标机器需预装 Node.js 20 或更高版本及 npm，无需 GitHub 认证：
+标准内部安装要求目标机器预装 Node.js 20、npm、GitHub CLI，并使用具有私有仓库 Release 读取权限的 GitHub 账号：
 
 ```powershell
-npm install -g https://github.com/chuzihang123/jiaban-cli/releases/download/v0.3.0/jiaban-cli-0.3.0.tgz
-jiaban --version
-jiaban --help
-```
-
-如需先下载并核对 SHA-256，可选用 GitHub CLI；公开仓库无需认证：
-
-```powershell
-gh release download v0.3.0 --repo chuzihang123/jiaban-cli --pattern "jiaban-cli-0.3.0.tgz*" --clobber
-Get-FileHash .\jiaban-cli-0.3.0.tgz -Algorithm SHA256
-```
-
-无法访问 GitHub 时，可由内部管理员安全传递已校验的本地 tgz，再安装：
-
-```powershell
-npm install -g .\jiaban-cli-0.3.0.tgz
+gh auth status
+gh release download v0.3.1-internal.1 --repo chuzihang123/jiaban-cli --pattern "jiaban-cli-0.3.1-internal.1.tgz*" --clobber
+Get-FileHash .\jiaban-cli-0.3.1-internal.1.tgz -Algorithm SHA256
+npm install -g .\jiaban-cli-0.3.1-internal.1.tgz
 jiaban --version
 jiaban --help
 ```
@@ -51,7 +39,7 @@ $skillPath = Join-Path (npm root -g) '@jiaban\cli\SKILL.md'
 Get-Content $skillPath
 ```
 
-Agent 应从该路径加载包内 `SKILL.md`，不得复制未知来源的 Skill，不得执行 `npm publish`。仅在源码开发目录可使用 `npm ci`、`npm test` 和 `npm link` 联调。
+Agent 应从该路径加载包内 `SKILL.md`，不得复制安装包或未知来源的 Skill，不得执行 `npm publish`。未获仓库权限时停止，不通过聊天、网盘或其他账号转发 tgz。仅在源码开发目录可使用 `npm ci`、`npm test` 和 `npm link` 联调。
 
 ## 总 Skill 与八个角色 Skill
 
@@ -69,7 +57,15 @@ skills/operations/SKILL.md      OPERATIONS / profile operations
 skills/customer/SKILL.md        CUSTOMER / profile customer
 ```
 
-每个角色使用单独的专用测试账号和预置加密 Profile。业务调用每次显式带固定 `--profile`；角色 Skill 不接收账号、密码或 Token，也不执行 Profile 凭据配置。`activeRole` 仅用于核对映射，不是权限沙箱，后端权限、租户和数据范围始终生效。
+每个角色使用单独的专用测试账号和预置加密 Profile。一般业务调用每次显式带固定 `--profile`；角色 Skill 不接收账号、密码或 Token，也不执行 Profile 凭据配置。`activeRole` 仅用于核对映射，不是权限沙箱，后端权限、租户和数据范围始终生效。
+
+### 私有 Release bundled WEB_ADMIN 模式
+
+私有 CI 可在打包前从受控 Secret 生成包根 `internal-test-profile.json`。源码只提供不参与运行时打包的 `internal-test-profile.example.json`，真实文件已被 `.gitignore` 忽略，严禁提交。严格字段只有 `baseUrl/phone/password/activeRole/fullAccess`；地址固定为内置测试地址，`activeRole` 必须精确为 `WEB_ADMIN`。
+
+只有在没有显式或 active 加密 Profile，且 `JIABAN_SESSION_TOKEN/JIABAN_INTEGRATION_PHONE/JIABAN_INTEGRATION_PASSWORD/JIABAN_ACTIVE_ROLE` 四个认证变量全部未配置或全为空时，CLI 才读取 bundled 配置并自动登录。任一变量非空但缺失配对、格式非法或仅配置角色时均 fail-closed，不读 bundle、不联网。`jiaban auth status` 会安全返回 `authSource=bundled-private-test`，不返回账号、密码或文件路径。只有验证此 marker 和 `activeRole=WEB_ADMIN` 后，WEB_ADMIN Skill 才可作为唯一例外省略 `--profile`。
+
+bundled `fullAccess=true` 只等价于通用 API 的 FULL_ACCESS gate。它不会设置 destructive；普通写仍需 dry-run、当前回合具体确认、`--yes --reason`，高危请求仍需部署端 destructive 开关和单次 plan。禁止复制此私有包到其他机器或人员。
 
 ## 基础命令和 Profile
 
@@ -93,9 +89,9 @@ jiaban profile remove test-a
 
 Profile 数据整体使用 AES-256-GCM 加密，随机 32 字节密钥与密文分文件保存在当前用户配置目录；文件权限会尽力设为 `0600`。Windows 默认目录为 `%LOCALAPPDATA%\jiaban-cli`，其他系统为 `~/.config/jiaban-cli`。Token 永不落盘。
 
-后端地址优先级固定为：显式选择或 active Profile 的 `baseUrl` > `JIABAN_BASE_URL` > 内置测试地址。Profile 的地址、账号、密码和 `activeRole` 整组优先于环境变量；旧 Profile 没有 `activeRole` 时兼容默认 `SENIOR_ADMIN`。`profile list/current` 仍只返回名称和 active 状态。
+认证配置优先级固定为：显式选择或 active 加密 Profile > 有效环境 session/账号密码 > 私有 Release bundled 配置。后端地址随选中的整组配置；公共源码没有 bundled 文件时仍可使用 `JIABAN_BASE_URL` 或内置测试地址。旧 Profile 没有 `activeRole` 时兼容默认 `SENIOR_ADMIN`。`profile list/current` 仍只返回名称和 active 状态。
 
-`profile use` 的 active 状态是同一 Agent 宿主上的全局状态，多对话会互相影响。Agent 必须串行执行命令，并在同一对话的每次业务调用中显式写 `--profile <name>`；不要依赖 active profile，也不要并发共享 Profile。
+`profile use` 的 active 状态是同一 Agent 宿主上的全局状态，多对话会互相影响。除已验证的 bundled-private-test WEB_ADMIN 例外外，Agent 必须串行执行命令，并在同一对话的每次业务调用中显式写 `--profile <name>`；不要并发共享 Profile。
 
 ## 通用 HTTP 请求
 
@@ -184,7 +180,7 @@ stdout 始终只输出一个 JSON 对象。成功示例：
 
 失败同样输出脱敏 JSON 并非零退出。退出码：`0` 成功、`1` 内部错误、`2` 参数或确认错误、`3` 配置错误、`4` 认证或授权失败、`5` 未找到、`6` 后端/协议/文件响应错误、`7` 网络或超时。
 
-0.3.0 的构造测试覆盖仓库静态盘点的 247 个 HTTP 端点，包括路径参数、query、JSON、表单、multipart 上传和二进制下载形态；这表示 CLI 能安全构造这些 HTTP 请求，不表示所有角色都能访问、请求一定成功或业务副作用已获批准。WebSocket 路由明确不计入 247，也不支持建立长连接。
+0.3.1-internal.1 的构造测试覆盖仓库静态盘点的 247 个 HTTP 端点，包括路径参数、query、JSON、表单、multipart 上传和二进制下载形态；这表示 CLI 能安全构造这些 HTTP 请求，不表示所有角色都能访问、请求一定成功或业务副作用已获批准。WebSocket 路由明确不计入 247，也不支持建立长连接。
 
 ## 安全边界
 

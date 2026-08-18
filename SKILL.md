@@ -10,7 +10,14 @@ description: Routes internal isolated-test Jiaban requests to one of eight role 
 - Use only dedicated accounts and test data in an isolated internal environment.
 - Treat backend authorization, tenant scope, and data scope as final; `activeRole` is not a permission sandbox.
 - Never request, copy, display, or persist credentials. They must already exist in deployment Secrets or an encrypted Profile.
-- Every business command must explicitly include the role's fixed `--profile <name>`.
+- Every business command must explicitly include the role's fixed `--profile <name>`, except the verified private bundled WEB_ADMIN mode below.
+
+## Private bundled exception
+
+- A no-profile `auth status` may be used only on an authorized private Release host.
+- Bundled fallback is eligible only when all four authentication environment variables are unset or empty; any partial or invalid environment authentication must fail closed.
+- Continue without `--profile` only when it returns both `authSource=bundled-private-test` and `activeRole=WEB_ADMIN`; route only to web-admin.
+- Never copy the private package or infer this mode from repository access, CLI version, or `fullAccess` alone.
 
 ## Route
 
@@ -18,7 +25,7 @@ description: Routes internal isolated-test Jiaban requests to one of eight role 
 2. Match exactly one row in [role-routing.md](references/role-routing.md).
 3. If the request is ambiguous, especially “管理员”, “总经理”, or “高级经理”, ask for the exact role instead of selecting a more privileged role.
 4. Load only the matched role Skill below and follow it with [CLI contract](references/cli-contract.md) and [safety policy](references/safety-policy.md).
-5. If the selected Profile reports a different `activeRole`, stop. Never switch identity to overcome 401/403.
+5. If the selected Profile or verified bundled mode reports a different `activeRole`, stop. Never switch identity to overcome 401/403.
 
 ## Role Skills
 

@@ -10,6 +10,8 @@ jiaban --profile <fixed-profile> auth status
 
 The returned `activeRole` must exactly match the role Skill. A Profile is a credential selector, not authorization.
 
+The only no-profile exception is an authorized private Release returning both `authSource=bundled-private-test` and `activeRole=WEB_ADMIN`. It routes only to web-admin; all other role calls keep their fixed explicit Profile.
+
 ## Fixed senior reads
 
 These commands are hard-coded to `/api/senior/**`. Only WEB_ADMIN, P9 SENIOR_ADMIN, P8 BRANCH_GENERAL_MANAGER, and P7 SENIOR_MANAGER may use them, and only when backend authorization allows the target:

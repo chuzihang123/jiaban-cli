@@ -49,7 +49,14 @@ async function invoke(argv, options = {}) {
     ...options.env,
   };
   const stdin = options.stdin === undefined ? Readable.from([]) : Readable.from([options.stdin]);
-  const exitCode = await run(argv, { env, fetch: fetchImpl, stdin, stdout: stdout.stream, stderr: stderr.stream });
+  const exitCode = await run(argv, {
+    env,
+    fetch: fetchImpl,
+    stdin,
+    stdout: stdout.stream,
+    stderr: stderr.stream,
+    bundledProfilePath: options.bundledProfilePath ?? path.join(TEST_CONFIG_ROOT, 'missing-bundled-profile.json'),
+  });
   const lines = stdout.value().trim().split('\n');
   assert.equal(lines.length, 1, 'stdout must contain exactly one JSON line');
   return { exitCode, body: JSON.parse(lines[0]), stdout: stdout.value(), stderr: stderr.value(), calls, env };

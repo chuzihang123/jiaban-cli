@@ -9,6 +9,7 @@ description: Handles isolated-test Jiaban backend administration with the dedica
 
 - Always use `--profile web-admin`; the Profile must belong only to the WEB_ADMIN test account.
 - First run `jiaban --profile web-admin auth status` and require `activeRole=WEB_ADMIN`.
+- Private Release exception: when a no-profile identity check returns `authSource=bundled-private-test` and `activeRole=WEB_ADMIN`, omit `--profile web-admin` for that process; never apply this exception to another role or source.
 - Limit work to the specifically named test user, role, permission, or organization object.
 - Do not route generic “管理员” here until the user distinguishes WEB_ADMIN from P9 SENIOR_ADMIN.
 
@@ -18,5 +19,7 @@ description: Handles isolated-test Jiaban backend administration with the dedica
 2. For a read, run `jiaban --profile web-admin api request GET /api/<confirmed-path> --dry-run`, review it, then run the same command without `--dry-run`.
 3. For a write, dry-run the exact request and obtain the user's specific current-turn confirmation before adding `--yes`.
 4. Treat permissions, status changes, password reset, approval, and DELETE as high risk and use the returned single-use `--plan-id`.
+
+Bundled `fullAccess` permits only the normal generic gate. It never supplies destructive authorization or current-turn write confirmation.
 
 Never change roles or broaden user/organization scope after 401/403. Follow the [CLI contract](../../references/cli-contract.md), [safety policy](../../references/safety-policy.md), and [role map](../../references/role-routing.md).

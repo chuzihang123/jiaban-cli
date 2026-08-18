@@ -5,6 +5,7 @@
 - Credentials belong only in deployment Secrets or a pre-provisioned encrypted Profile.
 - Role Skills receive only a Profile name. They never accept passwords, session tokens, account JSON, or raw Secret values.
 - Use one dedicated account per role and Profile. Do not share a Profile across roles.
+- A private bundled WEB_ADMIN account is allowed only inside the authorized private Release and only when all authentication environment variables are empty. Partial or invalid environment authentication fails closed. Never copy its package or expose its source file; its `fullAccess` never enables destructive requests.
 
 ## Read scope
 
