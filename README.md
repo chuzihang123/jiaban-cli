@@ -2,9 +2,9 @@
 
 > **Internal isolated testing only：仅用于隔离的内部测试环境，禁止连接生产环境，禁止发布 npm，禁止把它作为面向客户的产品或通用运维工具。**
 
-Jiaban CLI 是家办系统的 Agent 测试适配器。私有仓库 `chuzihang123/jiaban-cli` 仅向已授权的内部测试人员提供固定版本 Release；仓库和包都不得转发、复制到未授权宿主、用于生产或绕过后端权限。
+Jiaban CLI 是家办系统的 Agent 测试适配器。公开仓库和 Release 不包含任何账号、密码或 Token；工具仍仅限已授权的内部隔离测试，禁止用于生产或绕过后端权限。
 
-0.3.1-internal.1 在九个角色路由 Skill 和受控 CLI 上增加私有 Release 专用的 bundled WEB_ADMIN 测试 Profile fallback。公开源码和 Git commit 不携带真实配置；只有受控私有构建产物可包含它。
+0.3.2 在九个角色路由 Skill 和受控 CLI 上增加对话式 `WEB_ADMIN` 初始化：先验证固定测试后端的登录与身份，再原子加密保存 Profile `web-admin`。源码、Git commit 和安装包都不携带真实配置。
 
 ## 环境要求
 
@@ -17,17 +17,14 @@ Jiaban CLI 是家办系统的 Agent 测试适配器。私有仓库 `chuzihang123
 - `api request` 必须显式启用 `JIABAN_CLI_FULL_ACCESS_ENABLED=true`；DELETE 或高危路径还必须显式启用 `JIABAN_CLI_DESTRUCTIVE_ENABLED=true`。
 - 上传和下载必须分别配置绝对路径 `JIABAN_CLI_UPLOAD_ROOT`、`JIABAN_CLI_DOWNLOAD_ROOT`；文件不能越过对应 root。
 
-地址、账号、密码和开关必须在 Agent 部署时通过 Secret 或受控进程环境提供，严禁在飞书聊天、命令参数、日志或仓库中直接发送。只允许专用测试账号，严禁个人账号。HTTPS 为默认要求；仅 `localhost`/`127.0.0.1` 隔离测试允许 HTTP。
+地址、账号、密码和开关通常应在 Agent 部署时通过 Secret 或受控进程环境提供。唯一例外是用户明确触发下文 `admin init`，可在私密的一对一测试对话中把专用测试管理员凭据仅通过 stdin 交给 CLI；聊天平台仍可能留存输入。任何模式都禁止把密码放入命令参数、日志或仓库，只允许专用测试账号，严禁个人账号。HTTPS 为默认要求；仅 `localhost`/`127.0.0.1` 隔离测试允许 HTTP。
 
 ## 安装
 
-标准内部安装要求目标机器预装 Node.js 20、npm、GitHub CLI，并使用具有私有仓库 Release 读取权限的 GitHub 账号：
+标准安装要求目标机器预装 Node.js 20 和 npm。公开 Release 可直接安装，但 CLI 仍只允许用于内部隔离测试：
 
 ```powershell
-gh auth status
-gh release download v0.3.1-internal.1 --repo chuzihang123/jiaban-cli --pattern "jiaban-cli-0.3.1-internal.1.tgz*" --clobber
-Get-FileHash .\jiaban-cli-0.3.1-internal.1.tgz -Algorithm SHA256
-npm install -g .\jiaban-cli-0.3.1-internal.1.tgz
+npm install -g https://github.com/chuzihang123/jiaban-cli/releases/download/v0.3.2/jiaban-cli-0.3.2.tgz
 jiaban --version
 jiaban --help
 ```
@@ -39,7 +36,7 @@ $skillPath = Join-Path (npm root -g) '@jiaban\cli\SKILL.md'
 Get-Content $skillPath
 ```
 
-Agent 应从该路径加载包内 `SKILL.md`，不得复制安装包或未知来源的 Skill，不得执行 `npm publish`。未获仓库权限时停止，不通过聊天、网盘或其他账号转发 tgz。仅在源码开发目录可使用 `npm ci`、`npm test` 和 `npm link` 联调。
+Agent 应从该路径加载包内 `SKILL.md`，不得加载未知来源的 Skill，不得执行 `npm publish`。仅在源码开发目录可使用 `npm ci`、`npm test` 和 `npm link` 联调。
 
 ## 总 Skill 与八个角色 Skill
 
@@ -59,13 +56,13 @@ skills/customer/SKILL.md        CUSTOMER / profile customer
 
 每个角色使用单独的专用测试账号和预置加密 Profile。一般业务调用每次显式带固定 `--profile`；角色 Skill 不接收账号、密码或 Token，也不执行 Profile 凭据配置。`activeRole` 仅用于核对映射，不是权限沙箱，后端权限、租户和数据范围始终生效。
 
-### 私有 Release bundled WEB_ADMIN 模式
+### 对话式 WEB_ADMIN 初始化
 
-私有 CI 可在打包前从受控 Secret 生成包根 `internal-test-profile.json`。源码只提供不参与运行时打包的 `internal-test-profile.example.json`，真实文件已被 `.gitignore` 忽略，严禁提交。严格字段只有 `baseUrl/phone/password/activeRole/fullAccess`；地址固定为内置测试地址，`activeRole` 必须精确为 `WEB_ADMIN`。
+用户明确说“设置管理员账户”或“初始化管理员账户”时，Agent 可在私密的一对一内部测试对话中执行 `jiaban admin init`。命令不接受任何参数，只从 stdin 读取严格单个 JSON `{phone,password}`；禁止额外字段、命令行 password flag、日志回显和审计记录。
 
-只有在没有显式或 active 加密 Profile，且 `JIABAN_SESSION_TOKEN/JIABAN_INTEGRATION_PHONE/JIABAN_INTEGRATION_PASSWORD/JIABAN_ACTIVE_ROLE` 四个认证变量全部未配置或全为空时，CLI 才读取 bundled 配置并自动登录。任一变量非空但缺失配对、格式非法或仅配置角色时均 fail-closed，不读 bundle、不联网。`jiaban auth status` 会安全返回 `authSource=bundled-private-test`，不返回账号、密码或文件路径。只有验证此 marker 和 `activeRole=WEB_ADMIN` 后，WEB_ADMIN Skill 才可作为唯一例外省略 `--profile`。
+CLI 固定连接内置测试后端，以 `activeRole=WEB_ADMIN` 登录并调用 `/api/auth/me` 验证身份；两步全部成功后才在跨进程排他锁内复查并把账号密码用 AES-256-GCM 存为固定 Profile `web-admin`、设为 active。已存在 `web-admin` 时默认拒绝覆盖；并发初始化只允许一个提交。任何登录、协议、角色或提交前写盘失败都 fail-closed，不留下临时文件，原 key/data 字节保持不变。
 
-bundled `fullAccess=true` 只等价于通用 API 的 FULL_ACCESS gate。它不会设置 destructive；普通写仍需 dry-run、当前回合具体确认、`--yes --reason`，高危请求仍需部署端 destructive 开关和单次 plan。禁止复制此私有包到其他机器或人员。
+初始化成功只建立身份配置，不启用 `FULL_ACCESS` 或 `DESTRUCTIVE`。后续每次业务命令仍必须显式使用 `--profile web-admin`，普通写仍需 dry-run、当前回合确认、`--yes --reason`，高危请求仍需部署开关和单次 plan。聊天平台本身可能保留用户输入的密码，因此只允许专用测试账号和私密对话；禁止个人账号和生产凭据。
 
 ## 基础命令和 Profile
 
@@ -76,8 +73,12 @@ jiaban customer get --id 1
 jiaban contract list --customer-id 1
 jiaban contract status --id 1
 
+# 对话式初始化：Agent 将严格 {phone,password} JSON 通过 stdin 发送
+# 不要把密码放入命令参数、脚本源码、日志或公开群聊
+jiaban admin init
+
 # 凭据只从 stdin 的单个 JSON 读取，禁止 password 命令行参数
-'{"baseUrl":"https://test.example.com","phone":"13800138009","password":"...","activeRole":"TRUST_SPECIALIST"}' |
+'{"baseUrl":"https://test.example.com","phone":"<TEST_PHONE>","password":"<TEST_PASSWORD>","activeRole":"TRUST_SPECIALIST"}' |
   jiaban profile save test-a
 
 jiaban profile list
@@ -89,9 +90,9 @@ jiaban profile remove test-a
 
 Profile 数据整体使用 AES-256-GCM 加密，随机 32 字节密钥与密文分文件保存在当前用户配置目录；文件权限会尽力设为 `0600`。Windows 默认目录为 `%LOCALAPPDATA%\jiaban-cli`，其他系统为 `~/.config/jiaban-cli`。Token 永不落盘。
 
-认证配置优先级固定为：显式选择或 active 加密 Profile > 有效环境 session/账号密码 > 私有 Release bundled 配置。后端地址随选中的整组配置；公共源码没有 bundled 文件时仍可使用 `JIABAN_BASE_URL` 或内置测试地址。旧 Profile 没有 `activeRole` 时兼容默认 `SENIOR_ADMIN`。`profile list/current` 仍只返回名称和 active 状态。
+认证配置优先级固定为：显式选择或 active 加密 Profile > 有效环境 session/账号密码。后端地址随选中的整组配置；未配置时使用内置测试地址。旧 Profile 没有 `activeRole` 时兼容默认 `SENIOR_ADMIN`。`profile list/current` 仍只返回名称和 active 状态。
 
-`profile use` 的 active 状态是同一 Agent 宿主上的全局状态，多对话会互相影响。除已验证的 bundled-private-test WEB_ADMIN 例外外，Agent 必须串行执行命令，并在同一对话的每次业务调用中显式写 `--profile <name>`；不要并发共享 Profile。
+`profile use` 和 `admin init` 设置的 active 状态是同一 Agent 宿主上的全局状态，多对话会互相影响。Agent 必须串行执行命令，并在同一对话的每次业务调用中显式写 `--profile <name>`；不要并发共享 Profile。
 
 ## 通用 HTTP 请求
 
@@ -180,7 +181,7 @@ stdout 始终只输出一个 JSON 对象。成功示例：
 
 失败同样输出脱敏 JSON 并非零退出。退出码：`0` 成功、`1` 内部错误、`2` 参数或确认错误、`3` 配置错误、`4` 认证或授权失败、`5` 未找到、`6` 后端/协议/文件响应错误、`7` 网络或超时。
 
-0.3.1-internal.1 的构造测试覆盖仓库静态盘点的 247 个 HTTP 端点，包括路径参数、query、JSON、表单、multipart 上传和二进制下载形态；这表示 CLI 能安全构造这些 HTTP 请求，不表示所有角色都能访问、请求一定成功或业务副作用已获批准。WebSocket 路由明确不计入 247，也不支持建立长连接。
+0.3.2 的构造测试覆盖仓库静态盘点的 247 个 HTTP 端点，包括路径参数、query、JSON、表单、multipart 上传和二进制下载形态；这表示 CLI 能安全构造这些 HTTP 请求，不表示所有角色都能访问、请求一定成功或业务副作用已获批准。WebSocket 路由明确不计入 247，也不支持建立长连接。
 
 ## 安全边界
 

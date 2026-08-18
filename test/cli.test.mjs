@@ -55,7 +55,6 @@ async function invoke(argv, options = {}) {
     stdin,
     stdout: stdout.stream,
     stderr: stderr.stream,
-    bundledProfilePath: options.bundledProfilePath ?? path.join(TEST_CONFIG_ROOT, 'missing-bundled-profile.json'),
   });
   const lines = stdout.value().trim().split('\n');
   assert.equal(lines.length, 1, 'stdout must contain exactly one JSON line');

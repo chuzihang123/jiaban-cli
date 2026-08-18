@@ -10,7 +10,9 @@ jiaban --profile <fixed-profile> auth status
 
 The returned `activeRole` must exactly match the role Skill. A Profile is a credential selector, not authorization.
 
-The only no-profile exception is an authorized private Release returning both `authSource=bundled-private-test` and `activeRole=WEB_ADMIN`. It routes only to web-admin; all other role calls keep their fixed explicit Profile.
+## WEB_ADMIN initialization
+
+`jiaban admin init` is the only credential-provisioning command. It accepts no flags and reads only strict `{phone,password}` JSON from stdin. It always targets the built-in test origin, logs in as `WEB_ADMIN`, verifies `/api/auth/me`, and only then uses a cross-process exclusive store transaction to create and activate encrypted Profile `web-admin`. The transaction rechecks create-only under lock, rejects an existing target, and permits only one concurrent commit. Pre-commit failure leaves prior key/data bytes unchanged and no temp files. All later role calls use explicit `--profile web-admin`.
 
 ## Fixed senior reads
 

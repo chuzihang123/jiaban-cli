@@ -3,9 +3,9 @@
 ## Credentials
 
 - Credentials belong only in deployment Secrets or a pre-provisioned encrypted Profile.
-- Role Skills receive only a Profile name. They never accept passwords, session tokens, account JSON, or raw Secret values.
+- Role Skills receive only a Profile name during business operations. The explicit `admin init` setup flow may accept one strict account JSON through stdin in a private one-to-one test conversation.
 - Use one dedicated account per role and Profile. Do not share a Profile across roles.
-- A private bundled WEB_ADMIN account is allowed only inside the authorized private Release and only when all authentication environment variables are empty. Partial or invalid environment authentication fails closed. Never copy its package or expose its source file; its `fullAccess` never enables destructive requests.
+- `admin init` must verify the fixed test origin and `WEB_ADMIN` identity before atomically saving Profile `web-admin`. Credentials must never enter argv, stdout, stderr, audit, source, or package; failure leaves the prior active Profile unchanged.
 
 ## Read scope
 

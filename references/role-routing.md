@@ -4,7 +4,7 @@ This is the single routing source. A phrase must identify one row; otherwise ask
 
 | Skill | activeRole | Fixed Profile | Unique triggers | Typical business targets |
 |---|---|---|---|---|
-| web-admin | WEB_ADMIN | web-admin | 后台管理员、Web管理员、后台用户权限 | 后台用户、角色、权限、组织配置 |
+| web-admin | WEB_ADMIN | web-admin | 后台管理员、Web管理员、后台用户权限、设置管理员账户、初始化管理员账户 | 后台用户、角色、权限、组织配置 |
 | manager | MANAGER | manager | 客户经理、P6经理、后端显示P6经理 | 所属客户、客户服务、合同跟进 |
 | p9 | SENIOR_ADMIN | p9 | P9总经理、P9高级管理 | 本公司及后端授权管理链 |
 | p8 | BRANCH_GENERAL_MANAGER | p8 | P8高级经理、分公司总经理 | 授权下属树查看、配置和转交 |
