@@ -42,7 +42,6 @@ async function invoke(argv, options = {}) {
     JIABAN_BASE_URL: 'http://127.0.0.1:8011',
     JIABAN_SESSION_TOKEN: 'session-secret-value',
     JIABAN_CONFIG_DIR: configDir,
-    JIABAN_CLI_FULL_ACCESS_ENABLED: 'true',
     ...options.env,
   };
   const exitCode = await run(argv, {
@@ -92,10 +91,11 @@ test('parser supports six methods, repeated query/header and rejects unsafe comb
   }
 });
 
-test('full-access gate, protected headers and write confirmation fail before network', async () => {
-  const disabled = await invoke(['api', 'request', 'GET', '/api/x'], { env: { JIABAN_CLI_FULL_ACCESS_ENABLED: '' } });
-  assert.equal(disabled.body.error.code, 'FULL_ACCESS_DISABLED');
-  assert.equal(disabled.calls.length, 0);
+test('generic reads are enabled without environment setup; protected headers and write confirmation fail before network', async () => {
+  const enabled = await invoke(['api', 'request', 'GET', '/api/x']);
+  assert.equal(enabled.exitCode, 0);
+  assert.equal(enabled.body.ok, true);
+  assert.equal(enabled.calls.length, 1);
 
   const protectedHeader = await invoke(['api', 'request', 'GET', '/api/x', '--header', 'Authorization: Bearer stolen']);
   assert.equal(protectedHeader.body.error.code, 'PROTECTED_HEADER');
@@ -237,7 +237,7 @@ test('JSON file, raw file and multipart uploads stay under absolute upload root'
   const rawPath = path.join(uploadRoot, 'payload.bin');
   await writeFile(jsonPath, '{"hello":"world"}');
   await writeFile(rawPath, Buffer.from([0, 1, 2, 3]));
-  const env = { JIABAN_CLI_FULL_ACCESS_ENABLED: 'true', JIABAN_CLI_UPLOAD_ROOT: uploadRoot };
+  const env = { JIABAN_CLI_UPLOAD_ROOT: uploadRoot };
   const configDir = path.join(ROOT, 'prepare-config');
 
   const jsonPrepared = await prepareGenericRequest({
@@ -296,7 +296,7 @@ test('symlink upload is rejected where supported', async (t) => {
   try { await symlink(target, link, 'file'); } catch { t.skip('host does not permit symlink creation'); return; }
   await assert.rejects(prepareGenericRequest({
     request: parseApiRequestArgs(['POST', '/api/x', '--json-file', link, '--dry-run', '--reason', 'T-6']),
-    env: { JIABAN_CLI_FULL_ACCESS_ENABLED: 'true', JIABAN_CLI_UPLOAD_ROOT: uploadRoot },
+    env: { JIABAN_CLI_UPLOAD_ROOT: uploadRoot },
     stdin: Readable.from([]), profileKey: 'test', configDir: path.join(ROOT, 'symlink-config'),
   }), (error) => error.code === 'INVALID_FILE');
 });

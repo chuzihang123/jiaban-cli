@@ -3,7 +3,7 @@
 | 错误族 | 给用户的提示 | 后续动作 |
 |---|---|---|
 | `INVALID_*`, `PROTECTED_HEADER`, `RESERVED_PATH` | 未执行；指出缺少或不允许的字段 | 修正后重新 dry-run，不自动重试 |
-| `WRITE_CONFIRMATION_REQUIRED`, `FULL_ACCESS_DISABLED`, `DESTRUCTIVE_DISABLED` | 未执行；缺少写入确认或部署闸门 | 不替用户开启闸门；获得授权后重新 dry-run |
+| `WRITE_CONFIRMATION_REQUIRED`, `DESTRUCTIVE_DISABLED` | 未执行；缺少写入确认或高危部署闸门 | 不替用户开启高危闸门；获得授权后重新 dry-run |
 | `PLAN_REQUIRED`, `PLAN_INVALID` | 计划缺失、过期或与当前请求不匹配 | 重新 dry-run、重新确认，禁止复用 |
 | `PROFILE_NOT_FOUND`, `PROFILE_STORE_CORRUPT`, `PROFILE_LOCK_TIMEOUT`, `ADMIN_PROFILE_EXISTS` | 本地身份配置不可用或已存在 | 停止并要求人工处理固定 Profile |
 | `LOGIN_FAILED`, `UNAUTHENTICATED` | 身份失效或登录失败，未执行 | 停止；不得换 Profile、角色或端点 |

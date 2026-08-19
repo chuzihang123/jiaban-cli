@@ -14,7 +14,7 @@ Jiaban CLI 是家办系统的 Agent 测试适配器。公开仓库和 Release �
 - 或注入可选 `JIABAN_BASE_URL`、`JIABAN_INTEGRATION_PHONE`、`JIABAN_INTEGRATION_PASSWORD`，CLI 自动登录，Token 只保留在当前进程。
 - 可选 `JIABAN_ACTIVE_ROLE`：`CUSTOMER`、`MANAGER`、`SENIOR_ADMIN`、`SENIOR_MANAGER`、`BRANCH_GENERAL_MANAGER`、`TRUST_SPECIALIST`、`OPERATIONS`、`WEB_ADMIN`；未设置默认 `SENIOR_ADMIN`。
 - 可选 `JIABAN_CONFIG_DIR` 仅用于测试隔离，且必须是绝对路径。
-- `api request` 必须显式启用 `JIABAN_CLI_FULL_ACCESS_ENABLED=true`；DELETE 或高危路径还必须显式启用 `JIABAN_CLI_DESTRUCTIVE_ENABLED=true`。
+- `api request` 在内部测试版中统一启用，无需用户或 Agent 配置额外开关；DELETE 或高危路径仍必须显式启用 `JIABAN_CLI_DESTRUCTIVE_ENABLED=true`。
 - 上传和下载必须分别配置绝对路径 `JIABAN_CLI_UPLOAD_ROOT`、`JIABAN_CLI_DOWNLOAD_ROOT`；文件不能越过对应 root。
 
 地址、账号、密码和开关通常应在 Agent 部署时通过 Secret 或受控进程环境提供。唯一例外是用户明确触发下文 `admin init`，可在私密的一对一测试对话中把专用测试管理员凭据仅通过 stdin 交给 CLI；聊天平台仍可能留存输入。任何模式都禁止把密码放入命令参数、日志或仓库，只允许专用测试账号，严禁个人账号。HTTPS 为默认要求；仅 `localhost`/`127.0.0.1` 隔离测试允许 HTTP。
@@ -62,7 +62,7 @@ skills/customer/SKILL.md        CUSTOMER / profile customer
 
 CLI 固定连接内置测试后端，以 `activeRole=WEB_ADMIN` 登录并调用 `/api/auth/me` 验证身份；两步全部成功后才在跨进程排他锁内复查并把账号密码用 AES-256-GCM 存为固定 Profile `web-admin`、设为 active。已存在 `web-admin` 时默认拒绝覆盖；并发初始化只允许一个提交。任何登录、协议、角色或提交前写盘失败都 fail-closed，不留下临时文件，原 key/data 字节保持不变。
 
-初始化成功只建立身份配置，不启用 `FULL_ACCESS` 或 `DESTRUCTIVE`。后续每次业务命令仍必须显式使用 `--profile web-admin`，普通写仍需 dry-run、当前回合确认、`--yes --reason`，高危请求仍需部署开关和单次 plan。聊天平台本身可能保留用户输入的密码，因此只允许专用测试账号和私密对话；禁止个人账号和生产凭据。
+初始化成功只建立身份配置；通用 `api request` 已统一可用，但不授予任何后端权限。后续每次业务命令仍必须显式使用 `--profile web-admin`，普通写仍需 dry-run、当前回合确认、`--yes --reason`，高危请求仍需部署开关和单次 plan。聊天平台本身可能保留用户输入的密码，因此只允许专用测试账号和私密对话；禁止个人账号和生产凭据。
 
 ## 基础命令和 Profile
 
@@ -149,9 +149,9 @@ jiaban --profile test-a api request GET /api/files/123/download `
   --output C:\jiaban-download\result.pdf
 ```
 
-### FULL_ACCESS 与 DESTRUCTIVE
+### 通用接口与 DESTRUCTIVE
 
-`JIABAN_CLI_FULL_ACCESS_ENABLED=true` 只解锁通用 `api request` 入口，不授予后端权限，也不改变 Profile 身份、角色、租户或数据范围。未精确设置为 `true` 时，`api request` 必须在联网前失败；基础领域命令仍可使用。
+内部测试版统一开放通用 `api request` 入口，不需要设置额外环境开关。这只表示 CLI 可以发送已编入 Skill 索引的请求，不授予后端权限，也不改变 Profile 身份、角色、租户或数据范围；所有请求仍由后端鉴权和数据范围规则最终裁决。
 
 `POST`、`PUT`、`PATCH` 执行时必须提供 `--yes --reason`。`DELETE` 以及路径含 `reset-password`、`status`、`permissions`、`approve`、`reject`、`sign`、`publish`、`forward`、`archive`、`withdraw`、`replace` 等高危词的请求，还要求 `JIABAN_CLI_DESTRUCTIVE_ENABLED=true` 和有效 `--plan-id`。环境开关与 plan 都不能替代当前命令的明确确认。任何 401/403 都应停止，不得换身份、扩大路径或尝试绕过。
 

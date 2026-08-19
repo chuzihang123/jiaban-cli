@@ -383,7 +383,7 @@ test('marks generic write transport failure as outcome unknown and not retryable
   const result = await invoke([
     'api', 'request', 'POST', '/api/example', '--reason', '当前回合测试确认', '--yes',
   ], {
-    env: { JIABAN_CLI_FULL_ACCESS_ENABLED: 'true' },
+    env: {},
     fetch: async () => { const error = new Error('aborted'); error.name = 'AbortError'; throw error; },
   });
   assert.equal(result.exitCode, 7);

@@ -42,7 +42,6 @@ const HELP = {
     'JIABAN_SESSION_TOKEN, or JIABAN_INTEGRATION_PHONE + JIABAN_INTEGRATION_PASSWORD (except health)',
     'JIABAN_ACTIVE_ROLE (optional login role; defaults to SENIOR_ADMIN)',
     'JIABAN_CONFIG_DIR (optional absolute test isolation directory)',
-    'JIABAN_CLI_FULL_ACCESS_ENABLED=true (required for api request)',
     'JIABAN_CLI_DESTRUCTIVE_ENABLED=true (required for high-risk api request)',
     'JIABAN_CLI_UPLOAD_ROOT / JIABAN_CLI_DOWNLOAD_ROOT (absolute file roots)',
   ],

@@ -205,7 +205,6 @@ function parseUploadOption(item) {
 }
 
 export async function prepareGenericRequest({ request, env, stdin, profileKey, configDir, baseUrl = '' }) {
-  if (env.JIABAN_CLI_FULL_ACCESS_ENABLED !== 'true') fail('FULL_ACCESS_DISABLED', '通用接口能力未启用', 3);
   if (request.highRisk && env.JIABAN_CLI_DESTRUCTIVE_ENABLED !== 'true') fail('DESTRUCTIVE_DISABLED', '高危接口能力未启用', 3);
   if (request.options.query.length > 100 || request.options.headers.length > 100) fail('INVALID_ARGUMENT', 'query/header 数量过多');
   const query = new URLSearchParams();
