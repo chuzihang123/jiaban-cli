@@ -147,8 +147,13 @@ test('each role has a lazy-loaded operation index with structured ids and requir
     assert.doesNotMatch(text, /<confirmed-path>/);
   }
   const admin = await readFile(path.join(ROOT, 'skills', 'web-admin', 'operations.md'), 'utf8');
-  assert.match(admin, /`admin\.user\.create-p9`[\s\S]*`phone,displayName,departmentId`/);
-  assert.match(admin, /必须追问所属公司\/部门/);
+  assert.match(admin, /`admin\.user\.create`[\s\S]*`phone,displayName,roleCode,companyId,departmentId`/);
+  assert.match(admin, /`admin\.user\.create-p9`[\s\S]*`phone,displayName,companyId,departmentId`/);
+  assert.match(admin, /缺任一ID都必须追问/);
+  assert.match(admin, /UserRequest[\s\S]*不得附加 `companyId`/);
+  const dialog = await readFile(path.join(ROOT, 'references', 'dialog-state.md'), 'utf8');
+  assert.match(dialog, /创建任何内部用户[\s\S]*`companyId` 与 `departmentId`/);
+  assert.match(dialog, /最终 `UserRequest` JSON 不包含该字段/);
 });
 
 test('every indexed operation has one exact route format and every R3/R4 route is CLI-enforced', async () => {

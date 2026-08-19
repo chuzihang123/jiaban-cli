@@ -188,7 +188,7 @@ CLI 的通用请求层覆盖仓库静态盘点的 HTTP 请求形态，包括路�
 3. 明确业务动作后，再加载该角色同目录 `operations.md`。
 4. 只有进入补参、执行或错误阶段时，才加载 `dialog-state.md`、`cli-contract.md`、`safety-policy.md` 或 `error-policy.md`。
 
-例如“创建 P9 + 手机号 + 姓名”不会立即调用接口；`admin.user.create-p9` 还要求明确 `departmentId`（所属公司/部门），Skill 会先补问该参数，再进行 dry-run 和当前回合确认。
+例如“创建 P9 + 手机号 + 姓名”不会立即调用接口；`admin.user.create-p9` 还要求同时明确 `companyId` 与 `departmentId`。Skill 会先补问缺失ID并确认部门属于该公司，再进行 dry-run 和当前回合确认。后端 `UserRequest` 不接收 `companyId`，因此它只用于对话范围和归属校验，最终请求body只提交 `departmentId` 等真实DTO字段。
 
 ## 安全边界
 

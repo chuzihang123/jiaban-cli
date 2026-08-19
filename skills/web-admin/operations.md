@@ -11,8 +11,8 @@
 | `admin.department.update` | 编辑/移动部门；PUT `/api/admin/departments/{id}` | `id,name` | `companyId,parentId,code,sort` | 禁止移动到自身/后代；R2 | 重查组织树 |
 | `admin.department.delete` | 停用部门；DELETE `/api/admin/departments/{id}` | `id` | 无 | 有子部门/用户/客户关联则拒绝；R4 | 重查组织树 |
 | `admin.user.list` | 查询内部成员；GET `/api/admin/users` | 无 | 仅用于明确管理清单，不用于猜目标 | 全局内部成员；R1；最小字段 | 无 |
-| `admin.user.create` | 创建内部成员；POST `/api/admin/users` | `phone,displayName,roleCode,departmentId`（WEB_ADMIN除外） | `jobTitle`; 按角色决定`managerUserId` | 禁止CUSTOMER；R3；只返回新用户ID/角色/状态 | 精确查询或成员清单核对 |
-| `admin.user.create-p9` | 创建P9；POST `/api/admin/users`，固定`roleCode=SENIOR_ADMIN` | `phone,displayName,departmentId` | `jobTitle=P9总经理`; `managerUserId`必须为空 | 用户只给手机号和姓名时必须追问所属公司/部门；R3 | 核对角色、部门、ENABLED |
+| `admin.user.create` | 创建内部成员；POST `/api/admin/users` | `phone,displayName,roleCode,companyId,departmentId` | `jobTitle`; 按角色决定`managerUserId` | 创建前必须确认部门属于该公司；请求body只提交UserRequest字段，不提交`companyId`；禁止CUSTOMER；R3；只返回新用户ID/角色/状态 | 精确查询或成员清单核对 |
+| `admin.user.create-p9` | 创建P9；POST `/api/admin/users`，固定`roleCode=SENIOR_ADMIN` | `phone,displayName,companyId,departmentId` | `jobTitle=P9总经理`; `managerUserId`必须为空 | 缺任一ID都必须追问；先确认部门属于该公司；请求body不提交`companyId`；R3 | 核对角色、公司、部门、ENABLED |
 | `admin.user.update` | 编辑成员/换角色；PUT `/api/admin/users/{id}` | `id,phone,displayName,roleCode`及角色所需部门/上级 | `jobTitle` | 全量主角色变更并使旧会话失效；R4 | 精确核对成员角色/部门 |
 | `admin.user.status` | 启停成员；PUT `/api/admin/users/{id}/status` | `id,status=ENABLED|DISABLED` | 无 | 会话失效；R3 | 精确核对状态 |
 | `admin.user.reset-password` | 重置密码；POST `/api/admin/users/{id}/reset-password` | `id` | 无 | 设置初始密码并强制改密；R4；不输出密码 | 核对状态/审计 |
@@ -21,4 +21,4 @@
 | `admin.permission.tree` | 权限树；GET `/api/admin/permissions/tree` | 无 | 无 | R1；只返回必要代码/名称 | 无 |
 | `admin.role.permissions.replace` | 全量替换角色权限；PUT `/api/admin/roles/{roleId}/permissions` | `roleId,permissionCodes[]`完整集合 | 无 | 非增量；WEB_ADMIN核心权限受保护；R4 | 重查该角色权限 |
 
-不要编造部门 `status` 更新字段：当前编辑DTO不支持；停用只能走 delete 语义。后端权限和关联约束为最终边界。
+创建用户时，`companyId` 是对话范围与部门归属校验参数；后端 `UserRequest` 只有 `phone,displayName,roleCode,jobTitle,departmentId,managerUserId`，因此最终JSON不得附加 `companyId`。不要编造部门 `status` 更新字段：当前编辑DTO不支持；停用只能走 delete 语义。后端权限和关联约束为最终边界。
