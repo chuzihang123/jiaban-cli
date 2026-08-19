@@ -1,5 +1,7 @@
 # MANAGER 操作索引
 
+通用写操作由Agent固定生成 `--reason internal-test:<operationId>`，dry-run与执行使用同一值，不向用户索要reason或工单；用户仍须在当前回合确认，R3/R4仍须单次plan。
+
 | operationId | Method / Path | 必填输入 | 可选/默认 | 范围与风险 |
 |---|---|---|---|---|
 | `manager.customer.get` | GET `/api/manager/customers/{id}` | `id` | 无 | 仅本人直接归属客户；R1 |

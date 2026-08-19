@@ -45,5 +45,6 @@ jiaban --profile <fixed-profile> api request GET /api/<confirmed-path>
 
 - R2: every POST/PUT/PATCH/DELETE requires `--dry-run`, current-turn confirmation, `--yes`, and `--reason`.
 - R3/R4: DELETE and indexed state/identity actions additionally require `JIABAN_CLI_DESTRUCTIVE_ENABLED=true` plus the fresh single-use `--plan-id`.
+- For every indexed generic write, the Agent supplies the exact deterministic reason `internal-test:<operationId>` to both dry-run and execution. It never asks the user for a reason or ticket, and the reason must contain no name, phone number, object label, free text, credential, or other user input.
 - Enforced high-risk actions include password/reset, status, permission replacement, approval/rejection, signing, publish, forward/return, recall/revise/regenerate/skip, confirm, todo start/complete, archive/withdraw/replace, member role edits, and customer-owner transfer.
 - GET/HEAD remain reads even when their resource path contains words such as status or archive.

@@ -18,11 +18,12 @@
 
 The following generic workflow applies only to `api request` writes; `admin init` follows the dedicated initialization rules above.
 
-1. Construct the exact request with `--dry-run`; this performs zero network activity.
-2. Show only the redacted method, path, scope, and effect. Ask for specific confirmation in the current turn.
-3. After confirmation, repeat the same request with `--yes --reason <test-reason>`.
-4. For R3/R4 actions in the selected role operation index, also use the current five-minute single-use `--plan-id`.
-5. If Profile, method, path, query, headers, body, files, output, overwrite, or reason changes, discard the plan and dry-run again.
+1. After selecting exactly one indexed `operationId`, derive the audit reason as the exact string `internal-test:<operationId>`. Never ask the user for `--reason`, a test reason, or a ticket number. Never include names, phone numbers, object labels, free text, credentials, or any other user input in it.
+2. Construct the exact request with `--dry-run --reason internal-test:<operationId>`; this performs zero network activity.
+3. Show only the redacted method, path, scope, and effect. Ask for specific confirmation in the current turn; the generated reason does not replace this confirmation.
+4. After confirmation, repeat the same request with `--yes --reason internal-test:<operationId>`, using the byte-for-byte identical reason from dry-run.
+5. For R3/R4 actions in the selected role operation index, also use the current five-minute single-use `--plan-id`.
+6. If Profile, method, path, query, headers, body, files, output, overwrite, or the derived reason changes, discard the plan and dry-run again.
 
 Never interpret a prior confirmation, deployment switch, `activeRole`, or available CLI capability as permission for a new write.
 

@@ -1,5 +1,7 @@
 # P8 操作索引
 
+通用写操作由Agent固定生成 `--reason internal-test:<operationId>`，dry-run与执行使用同一值，不向用户索要reason或工单；用户仍须在当前回合确认，R3/R4仍须单次plan。
+
 | operationId | Method / Path | 必填输入 | 范围 / 风险 |
 |---|---|---|---|
 | `senior.customer.list` | GET `/api/senior/customers` | 合法管理清单用途 | 仅本人授权下属owner树；R1 |

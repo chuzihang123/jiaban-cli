@@ -4,7 +4,7 @@
 
 Jiaban CLI 是家办系统的 Agent 测试适配器。公开仓库和 Release 不包含任何账号、密码或 Token；工具仍仅限已授权的内部隔离测试，禁止用于生产或绕过后端权限。
 
-0.4.1 固化飞书 Agent 的请求契约：GET/HEAD 明确禁止任何 body 参数，五类复杂 JSON/multipart 操作使用后端真实字段名，并明确 `admin init` 是独立的 create-only 安全初始化流程，不走 generic dry-run/plan。一个总路由 Skill 与八个角色 Skill 继续按需渐进加载。
+0.4.1 当前覆盖包优化飞书/Codex Agent 的写操作对话：Agent 从已选操作索引自动生成固定审计原因 `internal-test:<operationId>`，不再向用户询问 reason、测试原因或工单号；GET/HEAD 无请求体、复杂 JSON/multipart 真实字段名和 `admin init` 独立初始化契约继续保持。一个总路由 Skill 与八个角色 Skill 继续按需渐进加载。
 
 ## 环境要求
 
@@ -62,7 +62,7 @@ skills/customer/SKILL.md        CUSTOMER / profile customer
 
 CLI 固定连接内置测试后端，以 `activeRole=WEB_ADMIN` 登录并调用 `/api/auth/me` 验证身份；两步全部成功后才在跨进程排他锁内复查并把账号密码用 AES-256-GCM 存为固定 Profile `web-admin`、设为 active。已存在 `web-admin` 时默认拒绝覆盖；并发初始化只允许一个提交。任何登录、协议、角色或提交前写盘失败都 fail-closed，不留下临时文件，原 key/data 字节保持不变。
 
-初始化成功只建立身份配置；通用 `api request` 已统一可用，但不授予任何后端权限。后续每次业务命令仍必须显式使用 `--profile web-admin`，普通写仍需 dry-run、当前回合确认、`--yes --reason`，高危请求仍需部署开关和单次 plan。聊天平台本身可能保留用户输入的密码，因此只允许专用测试账号和私密对话；禁止个人账号和生产凭据。
+初始化成功只建立身份配置；通用 `api request` 已统一可用，但不授予任何后端权限。后续每次业务命令仍必须显式使用 `--profile web-admin`，普通写仍需 dry-run、当前回合确认及由Agent固定生成的 `--yes --reason internal-test:<operationId>`，高危请求仍需部署开关和单次 plan。聊天平台本身可能保留用户输入的密码，因此只允许专用测试账号和私密对话；禁止个人账号和生产凭据。
 
 ## 基础命令和 Profile
 
@@ -121,7 +121,7 @@ jiaban --profile <name> api request <METHOD> <PATH> [options]
 --dry-run                        只做本地校验，不联网
 --yes                            确认执行写请求
 --plan-id <id>                   高危 dry-run 生成的5分钟单次凭据
---reason <内部测试原因或工单>
+--reason internal-test:<operationId>  Agent按操作索引固定生成
 ```
 
 GET/HEAD 禁止请求体。`--json-stdin`/`--json-file`、`--body-file`、URL encoded form 和 multipart body 模式互斥。上传会按 `.pdf/.png/.jpg/.docx/.xlsx` 等安全扩展名推断常用 MIME；严格后端需要指定时使用 `field=绝对路径;type=application/pdf`，MIME 中禁止控制符。重复 field 可上传多个文件。请求固定 10 秒超时且不跟随重定向。CLI 自行注入认证，不允许覆盖 `Authorization`、`Cookie`、`Host`、`trust_token`、Content-Type、Origin、方法覆盖、原始 URL、转发或代理 Header，也拒绝 CR/LF 注入。写请求遇到 401 或网络失败绝不自动重放；GET/HEAD 仅在账号密码模式下允许因首次 401 重新登录并重试一次，不做一般网络重试。
@@ -132,18 +132,16 @@ GET/HEAD 禁止请求体。`--json-stdin`/`--json-file`、`--body-file`、URL en
 jiaban --profile test-a api request GET /api/todos --query status=PENDING --dry-run
 jiaban --profile test-a api request GET /api/todos --query status=PENDING
 
-'{"name":"内部测试"}' | jiaban --profile test-a api request POST /api/example `
-  --json-stdin --reason "TEST-1001" --dry-run
+'{"name":"内部测试"}' | jiaban --profile web-admin api request POST /api/admin/companies `
+  --json-stdin --reason "internal-test:admin.company.create" --dry-run
 
-'{"name":"内部测试"}' | jiaban --profile test-a api request POST /api/example `
-  --json-stdin --yes --reason "TEST-1001"
+'{"name":"内部测试"}' | jiaban --profile web-admin api request POST /api/admin/companies `
+  --json-stdin --yes --reason "internal-test:admin.company.create"
 
-jiaban --profile test-a api request POST /api/files/upload `
+jiaban --profile manager api request POST /api/manager/material-tasks/12/upload `
   --multipart `
-  --form customerId=12 `
-  --json-part 'metadata={"kind":"contract"}' `
   --upload "file=C:\jiaban-upload\material.pdf;type=application/pdf" `
-  --yes --reason "TEST-1002"
+  --yes --reason "internal-test:manager.material.upload"
 
 jiaban --profile test-a api request GET /api/files/123/download `
   --output C:\jiaban-download\result.pdf
@@ -153,11 +151,11 @@ jiaban --profile test-a api request GET /api/files/123/download `
 
 内部测试版统一开放通用 `api request` 入口，不需要设置额外环境开关。这只表示 CLI 可以发送已编入 Skill 索引的请求，不授予后端权限，也不改变 Profile 身份、角色、租户或数据范围；所有请求仍由后端鉴权和数据范围规则最终裁决。
 
-`POST`、`PUT`、`PATCH` 执行时必须提供 `--yes --reason`。`DELETE` 以及路径含 `reset-password`、`status`、`permissions`、`approve`、`reject`、`sign`、`publish`、`forward`、`archive`、`withdraw`、`replace` 等高危词的请求，还要求 `JIABAN_CLI_DESTRUCTIVE_ENABLED=true` 和有效 `--plan-id`。环境开关与 plan 都不能替代当前命令的明确确认。任何 401/403 都应停止，不得换身份、扩大路径或尝试绕过。
+`POST`、`PUT`、`PATCH` 执行时必须提供 `--yes --reason`。Agent从已选唯一 `operationId` 固定生成 `internal-test:<operationId>`，不得向用户索要reason、测试原因或工单号；固定reason中不得出现姓名、手机号、对象名称、自由文本、凭据或其他用户输入。`DELETE` 以及路径含 `reset-password`、`status`、`permissions`、`approve`、`reject`、`sign`、`publish`、`forward`、`archive`、`withdraw`、`replace` 等高危词的请求，还要求 `JIABAN_CLI_DESTRUCTIVE_ENABLED=true` 和有效 `--plan-id`。环境开关与 plan 都不能替代当前命令的明确确认。任何 401/403 都应停止，不得换身份、扩大路径或尝试绕过。
 
 ### dry-run plan 流程
 
-Agent 对所有通用请求都应先以相同请求数据执行 `--dry-run`。CLI 在本地完成 method、路径、Header、body、文件 root、确认和权限开关检查，输出脱敏摘要，且不发出网络请求。摘要只包含方法、路径、查询/Header 名称、body 模式和上传文件的字段名、大小与 SHA-256；不包含 Token、密码、Header 值、query 值或请求正文。
+Agent 对所有通用请求都应先以相同请求数据执行 `--dry-run`。通用写请求的dry-run与正式执行必须携带逐字相同的 `--reason internal-test:<operationId>`；该内部审计字段不能替代用户当前回合确认。CLI 在本地完成 method、路径、Header、body、文件 root、确认和权限开关检查，输出脱敏摘要，且不发出网络请求。摘要只包含方法、路径、查询/Header 名称、body 模式和上传文件的字段名、大小与 SHA-256；不包含 Token、密码、Header 值、query 值或请求正文。
 
 普通请求审阅后移除 `--dry-run`；写请求执行时增加 `--yes`。高危 dry-run 会生成 5 分钟有效、单次使用的 `planId`，绑定 Profile/origin、method、规范路径、query/Header 哈希、body/文件哈希、下载 root 内规范相对目标、overwrite 和 reason 哈希；绝对输出路径与 reason 原文不落 plan。执行时增加 `--yes --plan-id <planId>`，任一绑定项变化都会失败且消费 plan。不得让 Agent 自动确认或在未经用户当前回合明确授权时执行写操作。
 

@@ -1,5 +1,7 @@
 # TRUST_SPECIALIST 操作索引
 
+通用写操作由Agent固定生成 `--reason internal-test:<operationId>`，dry-run与执行使用同一值，不向用户索要reason或工单；用户仍须在当前回合确认，R3/R4仍须单次plan。
+
 | operationId | Method / Path | 必填输入 | 可选 / 范围与风险 |
 |---|---|---|---|
 | `specialist.flow.create` | POST `/api/specialist/contract-flows` multipart | 先执行recognize；再传`--form customerId=<id>`和`--form recognizedInfoJson=<JSON-array-string>`；识别字段数组至少含JSON属性`key`（fieldKey）=`investmentPath`及`key`（fieldKey）=`deliveryForm`，两项`value`均非空 | 可选`--form title=<text>`；合同重复`--upload contractFiles=<absolute-path>`，SPV重复`--upload spvFiles=<absolute-path>`；field名不可改；R2 |

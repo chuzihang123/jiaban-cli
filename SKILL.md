@@ -43,5 +43,5 @@ description: Routes internal isolated-test Jiaban requests to eight role skills 
 
 - Follow [dialog and parameter state](references/dialog-state.md), [error policy](references/error-policy.md), [CLI contract](references/cli-contract.md), and [safety policy](references/safety-policy.md) only when execution reaches those stages.
 - Never invent an endpoint or parameter. If no indexed `operationId` matches, stop and report that the operation is not yet documented.
-- Every generic request starts with dry-run. Generic writes require current-turn confirmation; R3/R4 require the current single-use plan. `admin init` is the documented dedicated exception.
+- Every generic request starts with dry-run. For a generic write, derive `--reason` deterministically from the selected operation as `internal-test:<operationId>`; never ask the user for a reason or ticket, and use the identical value for dry-run and execution. Generic writes still require current-turn confirmation; R3/R4 require the current single-use plan. `admin init` is the documented dedicated exception.
 - Return only the operation index's allowed minimum result.

@@ -1,6 +1,6 @@
 # WEB_ADMIN 操作索引
 
-字段约定：R0本地/身份，R1精确只读，R2普通写，R3状态或身份影响，R4删除/全量权限/批量。R2以上均先 dry-run + 当前回合确认 + `--yes --reason`；R3/R4还需单次 plan。
+字段约定：R0本地/身份，R1精确只读，R2普通写，R3状态或身份影响，R4删除/全量权限/批量。R2以上由Agent固定生成 `--reason internal-test:<operationId>`，dry-run与执行使用同一值，不向用户索要reason或工单；仍需当前回合确认，R3/R4还需单次 plan。
 
 | operationId | 意图 / Method Path | 必填输入 | 可选与默认 | 范围、风险、成功输出 | 写后校验 |
 |---|---|---|---|---|---|

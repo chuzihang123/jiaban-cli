@@ -180,6 +180,31 @@ test('dialog and error indexes forbid guessing and write replay', async () => {
   assert.match(errors, /禁止重放/);
 });
 
+test('agent derives a deterministic operation reason without asking the user', async () => {
+  const relativeFiles = [
+    'SKILL.md',
+    'README.md',
+    'references/dialog-state.md',
+    'references/safety-policy.md',
+    'references/cli-contract.md',
+    ...[...ROLE_MAP.keys()].map((slug) => `skills/${slug}/operations.md`),
+  ];
+  const corpus = await Promise.all(relativeFiles.map((name) => readFile(path.join(ROOT, name), 'utf8')));
+  for (const [index, text] of corpus.entries()) {
+    assert.ok(text.includes('internal-test:<operationId>'), `${relativeFiles[index]} missing deterministic reason format`);
+  }
+
+  const rules = corpus.join('\n');
+  assert.match(rules, /dry-run[^\n]*(?:同一|相同|identical)[^\n]*(?:reason|Reason)|reason[^\n]*(?:同一|相同|identical)[^\n]*dry-run/i);
+  assert.match(rules, /当前回合确认|current-turn confirmation/);
+  assert.match(rules, /禁止包含姓名、手机号[^\n]*自由文本[^\n]*凭据|must contain no name, phone number[^\n]*free text[^\n]*credential/i);
+  const positiveReasonPrompts = rules.split(/\r?\n/).filter((line) =>
+    !/(?:不再|不得|不要|禁止|never)/i.test(line)
+    && /(?:请(?:用户)?提供|向用户(?:询问|索取))[^\n]*(?:--reason|reason|工单)/i.test(line)
+  );
+  assert.deepEqual(positiveReasonPrompts, []);
+});
+
 test('CLI contract forbids every body mode on GET and HEAD', async () => {
   const contract = await readFile(path.join(ROOT, 'references', 'cli-contract.md'), 'utf8');
   assert.match(contract, /GET and HEAD never have a request body/);
