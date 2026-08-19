@@ -188,7 +188,7 @@ CLI 的通用请求层覆盖仓库静态盘点的 HTTP 请求形态，包括路�
 3. 明确业务动作后，再加载该角色同目录 `operations.md`。
 4. 只有进入补参、执行或错误阶段时，才加载 `dialog-state.md`、`cli-contract.md`、`safety-policy.md` 或 `error-policy.md`。
 
-P9/P8/P7/P6分别使用独立的 `admin.user.create-p9/create-p8/create-p7/create-p6` 引导。所有角色都先收集手机号、姓名、`companyId` 与 `departmentId`并核对部门归属；P9无上级，P8/P7必须由用户确认同公司在岗P9的 `managerUserId`，P6必须由用户确认同公司在岗P8或P7的 `managerUserId`。没有候选就停止，唯一候选也不自动选，多候选必须让用户选择。后端 `UserRequest` 不接收 `companyId`，因此最终请求body只提交真实DTO字段，再进行dry-run、当前回合确认、单次plan执行和写后精确核验。
+P9/P8/P7/P6分别使用独立的 `admin.user.create-p9/create-p8/create-p7/create-p6` 引导。用户只需提供手机号、姓名以及公司/部门名称；Agent调用组织树接口，先按公司ID去重，再列出公司和所属部门供选择，随后调用成员接口列出同公司合规上级供确认。不得要求普通用户填写 `companyId`、`departmentId` 或 `managerUserId`，这些ID仅在选择后由Agent内部绑定。公司、部门或上级没有候选就停止，唯一候选也要确认，多候选必须让用户选择。P9无上级，P8/P7选择同公司在岗P9，P6选择同公司在岗P8或P7。最终请求body只提交真实 `UserRequest` 字段，再进行dry-run、当前回合确认、单次plan执行和写后精确核验。
 
 ## 安全边界
 

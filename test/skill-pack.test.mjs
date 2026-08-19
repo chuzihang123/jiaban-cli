@@ -147,21 +147,28 @@ test('each role has a lazy-loaded operation index with structured ids and requir
     assert.doesNotMatch(text, /<confirmed-path>/);
   }
   const admin = await readFile(path.join(ROOT, 'skills', 'web-admin', 'operations.md'), 'utf8');
-  assert.match(admin, /`admin\.user\.create`[\s\S]*`phone,displayName,roleCode,companyId,departmentId`/);
-  assert.match(admin, /`admin\.user\.create-p9`[\s\S]*`phone,displayName,companyId,departmentId`/);
-  assert.match(admin, /`admin\.user\.create-p8`[\s\S]*`phone,displayName,companyId,departmentId,managerUserId`[\s\S]*BRANCH_GENERAL_MANAGER/);
-  assert.match(admin, /`admin\.user\.create-p7`[\s\S]*`phone,displayName,companyId,departmentId,managerUserId`[\s\S]*SENIOR_MANAGER/);
-  assert.match(admin, /`admin\.user\.create-p6`[\s\S]*`phone,displayName,companyId,departmentId,managerUserId`[\s\S]*MANAGER/);
-  assert.match(admin, /缺任一ID都必须追问/);
+  assert.match(admin, /`admin\.user\.create`[\s\S]*`phone,displayName,roleCode,companyName,departmentName`/);
+  assert.match(admin, /`admin\.user\.create-p9`[\s\S]*`phone,displayName,companyName,departmentName`/);
+  assert.match(admin, /`admin\.user\.create-p8`[\s\S]*`phone,displayName,companyName,departmentName`[\s\S]*BRANCH_GENERAL_MANAGER/);
+  assert.match(admin, /`admin\.user\.create-p7`[\s\S]*`phone,displayName,companyName,departmentName`[\s\S]*SENIOR_MANAGER/);
+  assert.match(admin, /`admin\.user\.create-p6`[\s\S]*`phone,displayName,companyName,departmentName`[\s\S]*MANAGER/);
+  assert.match(admin, /不得要求普通用户知道 `companyId`、`departmentId` 或 `managerUserId`/);
+  assert.match(admin, /调用 `admin\.department\.tree`[\s\S]*按 `companyId`[\s\S]*去重/);
+  assert.match(admin, /0个公司候选[\s\S]*1个候选[\s\S]*多个候选/);
+  assert.match(admin, /0个候选时停止并说明未找到[\s\S]*1个候选时展示部门名称并要求确认[\s\S]*多个候选时展示部门名称与层级供选择/);
+  assert.match(admin, /调用 `admin\.user\.list`[\s\S]*候选为0[\s\S]*候选为1[\s\S]*候选多于1/);
+  assert.match(admin, /候选为1[\s\S]*姓名、角色、部门[\s\S]*不得展示手机号/);
   assert.match(admin, /UserRequest[\s\S]*不得附加 `companyId`/);
   assert.match(admin, /候选为0[\s\S]*候选为1[\s\S]*候选多于1/);
   assert.match(admin, /P8\/P7必须选择同公司[\s\S]*SENIOR_ADMIN[\s\S]*P6必须选择同公司[\s\S]*BRANCH_GENERAL_MANAGER[\s\S]*SENIOR_MANAGER/);
   assert.match(admin, /任何字段变化都丢弃旧plan并重新dry-run/);
   assert.match(admin, /成功后按返回ID精确核对/);
   const dialog = await readFile(path.join(ROOT, 'references', 'dialog-state.md'), 'utf8');
-  assert.match(dialog, /创建任何内部用户[\s\S]*`companyId` 与 `departmentId`/);
+  assert.match(dialog, /不得向用户索要 `companyId`、`departmentId` 或 `managerUserId`/);
+  assert.match(dialog, /`admin\.department\.tree`[\s\S]*`admin\.user\.list`/);
+  assert.match(dialog, /按 `companyId`[\s\S]*去重[\s\S]*公司或部门均执行0个停止、1个确认、多个选择/);
   assert.match(dialog, /最终 `UserRequest` JSON 不包含该字段/);
-  assert.match(dialog, /唯一候选也必须让用户确认ID/);
+  assert.match(dialog, /1个候选仍展示名称并确认/);
 });
 
 test('every indexed operation has one exact route format and every R3/R4 route is CLI-enforced', async () => {
