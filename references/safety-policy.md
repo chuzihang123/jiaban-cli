@@ -6,6 +6,7 @@
 - Role Skills receive only a Profile name during business operations. The explicit `admin init` setup flow may accept one strict account JSON through stdin in a private one-to-one test conversation.
 - Use one dedicated account per role and Profile. Do not share a Profile across roles.
 - `admin init` must verify the fixed test origin and `WEB_ADMIN` identity before atomically saving Profile `web-admin`. Credentials must never enter argv, stdout, stderr, audit, source, or package; failure leaves the prior active Profile unchanged.
+- `admin init` is the deliberate exception to the generic write workflow: it performs its own login/identity/create-only transaction and therefore never uses generic `api request`, dry-run, plan-id, `--yes`, or `--reason`. Do not synthesize those flags.
 
 ## Read scope
 
@@ -14,6 +15,8 @@
 - Stop on 401/403. Do not switch role, Profile, endpoint, or identity to gain access.
 
 ## Writes
+
+The following generic workflow applies only to `api request` writes; `admin init` follows the dedicated initialization rules above.
 
 1. Construct the exact request with `--dry-run`; this performs zero network activity.
 2. Show only the redacted method, path, scope, and effect. Ask for specific confirmation in the current turn.

@@ -12,7 +12,7 @@ The returned `activeRole` must exactly match the role Skill. A Profile is a cred
 
 ## WEB_ADMIN initialization
 
-`jiaban admin init` is the only credential-provisioning command. It accepts no flags and reads only strict `{phone,password}` JSON from stdin. It always targets the built-in test origin, logs in as `WEB_ADMIN`, verifies `/api/auth/me`, and only then uses a cross-process exclusive store transaction to create and activate encrypted Profile `web-admin`. The transaction rechecks create-only under lock, rejects an existing target, and permits only one concurrent commit. Pre-commit failure leaves prior key/data bytes unchanged and no temp files. All later role calls use explicit `--profile web-admin`.
+`jiaban admin init` is the only credential-provisioning command. It is a dedicated local safety workflow, not a generic `api request`: it has no generic dry-run, plan-id, `--yes`, `--reason`, Profile, or API-path form. It accepts no flags and reads only strict `{phone,password}` JSON from stdin. It always targets the built-in test origin, logs in as `WEB_ADMIN`, verifies `/api/auth/me`, and only then uses a cross-process exclusive store transaction to create and activate encrypted Profile `web-admin`. The transaction rechecks create-only under lock, rejects an existing target, and permits only one concurrent commit. Pre-commit failure leaves prior key/data bytes unchanged and no temp files. All later role calls use explicit `--profile web-admin`.
 
 ## Fixed senior reads
 
@@ -36,6 +36,7 @@ jiaban --profile <fixed-profile> api request GET /api/<confirmed-path>
 
 - Only relative `/api/**` paths are allowed. Never supply authentication, Host, method-override, or rewrite headers.
 - Query values use repeated `--query key=value`. JSON uses stdin or an absolute file under the upload root.
+- GET and HEAD never have a request body. For GET/HEAD, all body-mode flags are forbidden: `--json-stdin`, `--json-file`, `--body-file`, `--content-type`, `--multipart`, `--form`, `--upload`, and `--json-part`. Do not pipe JSON to these reads. Use only `--query`, permitted `--header`, and read/output controls.
 - Files stay inside configured upload/download roots. Binary output always uses absolute `--output`.
 - stdout is one JSON object. Use results only when `ok=true`; never expose absolute output paths.
 - GET/HEAD may re-login once only after a credential-mode 401. Writes are never replayed. A write transport failure returns `retryable=false,outcomeUnknown=true` and must be resolved with an indexed read-only postcondition check.

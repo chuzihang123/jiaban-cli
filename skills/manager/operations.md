@@ -13,7 +13,7 @@
 | `manager.material.submit` | POST `/api/manager/material-tasks/{taskId}/submit-review` | `taskId` | 无 | R3 |
 | `manager.contract.list` | GET `/api/manager/customers/{customerId}/contract-flows` | `customerId` | 无 | 本人客户；R1 |
 | `manager.contract.get` | GET `/api/manager/contract-flows/{id}` | `id` | 无 | R1 |
-| `manager.contract.config` | POST `/api/manager/contract-flows/{id}/config` | `id`及配置请求 | 偏离收益率时审批附件必填 | R3 |
+| `manager.contract.config` | POST `/api/manager/contract-flows/{id}/config` JSON或multipart | `id`; Skill强约束request字段`productId,specificConfigAdvice,strategyAllocationsJson,allocationElementsJson`，其中两个AllocationsJson值必须是JSON编码字符串而非直接数组 | ContractFlowActionRequest完整11字段为`comment,customerId,productId,configTitle,managerSupplement,specificConfigAdvice,strategyAllocationsJson,allocationElementsJson,trustSpvPackageFlowId,trustSpvPackageFlowIds,reinvestWithoutPayment`；无附件用`--json-stdin`；有附件必须multipart：`--form request=<JSON-string>`且request值是完整JSON字符串，重复`--upload approvalFiles=<absolute-path>`；偏离收益率时审批附件必填；R3 |
 | `manager.contract.forward` | POST `/api/manager/contract-flows/{id}/forward-customer` | `id` | `comment` | 状态必须允许；R3 |
 | `manager.contract.return-four-docs` | POST `/api/manager/contract-flows/{id}/return-four-docs` | `id` | `comment` | R3 |
 | `manager.archive.upload` | POST `/api/archive/manager/upload` multipart | `file,customerId,archiveCategoryId,archiveClassificationId` | archiveTitle/visibleToCustomer | 本人客户；进入档案域，R3 |

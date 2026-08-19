@@ -15,7 +15,7 @@ description: Handles isolated-test Jiaban backend administration and secure setu
 ## Workflow
 
 1. For explicit administrator initialization in a private one-to-one test conversation, send strict `{phone,password}` JSON to `jiaban admin init` through stdin only. Never put credentials in argv or output.
-2. The command must verify login and `activeRole=WEB_ADMIN` before encrypted Profile `web-admin` becomes active; stop on any failure.
+2. This is a dedicated create-only safety workflow, not a generic request: never add dry-run, plan-id, `--yes`, `--reason`, `--profile`, or an API path. The command must verify login and `activeRole=WEB_ADMIN` before encrypted Profile `web-admin` becomes active; stop on any failure.
 3. Load [WEB_ADMIN operations](operations.md), select exactly one `operationId`, and collect every listed required input before any request.
 4. Follow [dialog state](../../references/dialog-state.md). For a write, dry-run the indexed method/path and obtain specific current-turn confirmation before `--yes`.
 5. R3/R4 operations require the returned single-use `--plan-id`; use [error policy](../../references/error-policy.md) on failure.

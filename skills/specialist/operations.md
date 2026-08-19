@@ -2,8 +2,8 @@
 
 | operationId | Method / Path | 必填输入 | 可选 / 范围与风险 |
 |---|---|---|---|
-| `specialist.flow.create` | POST `/api/specialist/contract-flows` multipart | `customerId` | title/识别JSON/合同与SPV文件；R2 |
-| `specialist.flow.recognize` | POST `/api/specialist/contract-flows/recognize` multipart | 至少一份待识别文件 | 只识别不建流程；R1型POST |
+| `specialist.flow.create` | POST `/api/specialist/contract-flows` multipart | 先执行recognize；再传`--form customerId=<id>`和`--form recognizedInfoJson=<JSON-array-string>`；识别字段数组至少含JSON属性`key`（fieldKey）=`investmentPath`及`key`（fieldKey）=`deliveryForm`，两项`value`均非空 | 可选`--form title=<text>`；合同重复`--upload contractFiles=<absolute-path>`，SPV重复`--upload spvFiles=<absolute-path>`；field名不可改；R2 |
+| `specialist.flow.recognize` | POST `/api/specialist/contract-flows/recognize` multipart | 至少一个`--upload contractFiles=<absolute-path>`或`--upload spvFiles=<absolute-path>` | 两类均可重复；不得传customerId/title/recognizedInfoJson；只识别不建流程；R1型POST |
 | `specialist.flow.list` | GET `/api/specialist/contract-flows` | 合法工作队列用途 | 不得用于猜客户或流程；R1 |
 | `specialist.flow.get` | GET `/api/specialist/contract-flows/{id}` | `id` | 授权/负责范围；R1 |
 | `specialist.review.approve` | POST `/api/specialist/contract-flows/{id}/review/approve` | `id` | comment可选；R3 |

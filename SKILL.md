@@ -16,6 +16,7 @@ description: Routes internal isolated-test Jiaban requests to eight role skills 
 
 - Trigger only from an explicit request to set or initialize the administrator account in a private one-to-one test conversation.
 - Pass the single strict `{phone,password}` JSON object to `jiaban admin init` through stdin; never place either value in argv, stdout, stderr, audit, or source.
+- Treat `admin init` as a dedicated create-only safety workflow, not a generic API write: never add dry-run, plan-id, `--yes`, `--reason`, `--profile`, or an API path.
 - The CLI uses the fixed test origin, verifies login and `WEB_ADMIN` identity first, then atomically encrypts and activates Profile `web-admin`.
 - On any failure, stop; do not retry with another role or persist an unverified Profile.
 
@@ -42,5 +43,5 @@ description: Routes internal isolated-test Jiaban requests to eight role skills 
 
 - Follow [dialog and parameter state](references/dialog-state.md), [error policy](references/error-policy.md), [CLI contract](references/cli-contract.md), and [safety policy](references/safety-policy.md) only when execution reaches those stages.
 - Never invent an endpoint or parameter. If no indexed `operationId` matches, stop and report that the operation is not yet documented.
-- Every generic request starts with dry-run. Writes require current-turn confirmation; R3/R4 require the current single-use plan.
+- Every generic request starts with dry-run. Generic writes require current-turn confirmation; R3/R4 require the current single-use plan. `admin init` is the documented dedicated exception.
 - Return only the operation index's allowed minimum result.

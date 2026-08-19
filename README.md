@@ -4,7 +4,7 @@
 
 Jiaban CLI 是家办系统的 Agent 测试适配器。公开仓库和 Release 不包含任何账号、密码或 Token；工具仍仅限已授权的内部隔离测试，禁止用于生产或绕过后端权限。
 
-0.4.0 将九个角色 Skill 改为渐进加载：根 Skill 只做角色和操作域索引，每个角色按需加载自己的 `operations.md`，共享补参状态、错误策略、CLI契约和安全规则。对话式 `WEB_ADMIN` 初始化仍先验证固定测试后端的登录与身份，再原子加密保存 Profile `web-admin`。
+0.4.1 固化飞书 Agent 的请求契约：GET/HEAD 明确禁止任何 body 参数，五类复杂 JSON/multipart 操作使用后端真实字段名，并明确 `admin init` 是独立的 create-only 安全初始化流程，不走 generic dry-run/plan。一个总路由 Skill 与八个角色 Skill 继续按需渐进加载。
 
 ## 环境要求
 
@@ -24,7 +24,7 @@ Jiaban CLI 是家办系统的 Agent 测试适配器。公开仓库和 Release �
 标准安装要求目标机器预装 Node.js 20 和 npm。公开 Release 可直接安装，但 CLI 仍只允许用于内部隔离测试：
 
 ```powershell
-npm install -g ./jiaban-cli-0.4.0.tgz
+npm install -g ./jiaban-cli-0.4.1.tgz
 jiaban --version
 jiaban --help
 ```

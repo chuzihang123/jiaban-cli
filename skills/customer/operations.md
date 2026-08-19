@@ -8,7 +8,7 @@
 | `customer.service.get` | GET `/api/mobile/customer/service` | 无 | 仅本人；R1 |
 | `customer.agreement.list` | GET `/api/mobile/customer/agreements` | 无 | 仅本人协议；R1 |
 | `customer.report.list` | GET `/api/mobile/customer/reports` | 无 | 仅本人已发布报告；R1 |
-| `customer.agreement.fields` | PUT `/api/mobile/customer/agreements/{id}/fields` | 协议`id,fields[]` | R2 |
+| `customer.agreement.fields` | PUT `/api/mobile/customer/agreements/{id}/fields` JSON | 协议`id`；`--json-stdin`传顶层数组（不能包`fields`），每项`fieldKey,fieldValue` | 每项可含`fieldLabel,fieldType`；仅协议允许的fieldKey生效；R2 |
 | `customer.agreement.confirm` | POST `/api/mobile/customer/agreements/{id}/confirm` | 协议`id` | 必填字段完整；R3 |
 | `customer.profile.get` | GET `/api/mobile/customer/profile` | 无 | R1 |
 | `customer.profile.phone` | PUT `/api/mobile/customer/profile` | `phone` | 当前实现仅手机号实际更新；R3 |

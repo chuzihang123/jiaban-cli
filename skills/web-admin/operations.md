@@ -4,7 +4,7 @@
 
 | operationId | 意图 / Method Path | 必填输入 | 可选与默认 | 范围、风险、成功输出 | 写后校验 |
 |---|---|---|---|---|---|
-| `admin.init` | 初始化管理员；`jiaban admin init` | stdin `{phone,password}` | 无 | 固定测试地址并验证WEB_ADMIN；R3；仅输出Profile名/角色 | `auth status` |
+| `admin.init` | 初始化管理员；专用本地命令 `jiaban admin init`，不是 generic API | stdin 严格 `{phone,password}` | 禁止 dry-run/plan-id/`--yes`/`--reason`/`--profile`/API path | 固定测试地址、验证WEB_ADMIN、create-only原子保存；独立安全例外；仅输出Profile名/角色 | `jiaban --profile web-admin auth status` |
 | `admin.department.tree` | 组织树；GET `/api/admin/departments/tree` | 无 | 无 | 全局启用组织；R1；仅ID/名称/层级 | 无 |
 | `admin.company.create` | 创建公司；POST `/api/admin/companies` | `name` | `code`自动，`sort=0` | 全局；R2；返回公司/根部门ID | 重查组织树 |
 | `admin.department.create` | 创建部门；POST `/api/admin/departments` | `name`；多公司时`companyId`或`parentId` | `code`自动，`sort=0` | 父子同公司；R2 | 重查组织树 |

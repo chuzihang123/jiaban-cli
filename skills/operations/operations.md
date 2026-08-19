@@ -6,7 +6,7 @@
 | `operations.product.get` | GET `/api/operations/products/{id}` | `id` | R1 |
 | `operations.product.create` | POST `/api/operations/products` | `productName,productType` | productCode自动、status默认ACTIVE；R2 |
 | `operations.product.update` | PUT `/api/operations/products/{id}` | `id,productName,productType` | R2 |
-| `operations.product.config-file` | PUT `/api/operations/products/{id}/config-file` | `id,configFile` | R3 |
+| `operations.product.config-file` | PUT `/api/operations/products/{id}/config-file` multipart | `id`; 单文件 `--upload configFile=<absolute-path>` | 必须 `--multipart`；field 只能叫`configFile`；R3 |
 | `operations.product.status` | PUT `/api/operations/products/{id}/status` | `id,status` | R3 |
 | `operations.product.delete` | DELETE `/api/operations/products/{id}` | `id` | R4 |
 | `operations.archive-category.list` | GET `/api/operations/archive-categories/tree` | 无 | R1 |
@@ -25,6 +25,6 @@
 | `operations.agreement-template.update` | PUT `/api/admin/service-agreement-templates/{id}` | `id,templateName,content` | 同上；R3 |
 | `operations.agreement-template.status` | PUT `/api/admin/service-agreement-templates/{id}/status` | `id,status` | R3 |
 | `operations.agreement-template.delete` | DELETE `/api/admin/service-agreement-templates/{id}` | `id` | R4 |
-| `operations.asset-template.submit` | PUT `/api/admin/asset-templates` | 非空`templates[]` | 保存为PENDING_REVIEW；R3 |
+| `operations.asset-template.submit` | PUT `/api/admin/asset-templates` JSON object | `--json-stdin`传顶层对象；非空`templates[]`；每项`id,name,riskLevel,version,status,doubleTime,annualReturnRange,strategyPosition,allocations[]`；每个allocation含`configType,productName,ratio,expectedReturn` | 顶层可含`title,description`；保存为PENDING_REVIEW；R3 |
 
 写后精确读取产品、分类、档案或模板状态；不得自动发布或扩大到全部产品。

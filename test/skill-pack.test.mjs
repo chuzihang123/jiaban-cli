@@ -180,6 +180,50 @@ test('dialog and error indexes forbid guessing and write replay', async () => {
   assert.match(errors, /禁止重放/);
 });
 
+test('CLI contract forbids every body mode on GET and HEAD', async () => {
+  const contract = await readFile(path.join(ROOT, 'references', 'cli-contract.md'), 'utf8');
+  assert.match(contract, /GET and HEAD never have a request body/);
+  for (const flag of ['--json-stdin', '--json-file', '--body-file', '--content-type', '--multipart', '--form', '--upload', '--json-part']) {
+    assert.ok(contract.includes(`\`${flag}\``), `GET/HEAD contract missing ${flag}`);
+  }
+  for (const method of ['GET', 'HEAD']) {
+    for (const args of [['--json-stdin'], ['--json-file', 'x.json'], ['--body-file', 'x.bin', '--content-type', 'application/octet-stream'], ['--multipart', '--form', 'x=y'], ['--multipart', '--upload', 'file=x.pdf'], ['--multipart', '--json-part', 'request=x.json']]) {
+      assert.throws(() => parseApiRequestArgs([method, '/api/example', ...args]), /禁止请求body/);
+    }
+  }
+});
+
+test('admin init is consistently documented as a dedicated generic-write exception', async () => {
+  const files = ['SKILL.md', 'references/cli-contract.md', 'references/safety-policy.md', 'skills/web-admin/SKILL.md', 'skills/web-admin/operations.md'];
+  for (const name of files) {
+    const text = await readFile(path.join(ROOT, name), 'utf8');
+    assert.match(text, /admin init/);
+    assert.match(text, /(?:dedicated|独立|专用)/, `${name} must describe the dedicated init flow`);
+  }
+  const operations = await readFile(path.join(ROOT, 'skills', 'web-admin', 'operations.md'), 'utf8');
+  assert.match(operations, /禁止 dry-run\/plan-id\/`--yes`\/`--reason`\/`--profile`\/API path/);
+});
+
+test('complex operation contracts pin exact backend body shapes and multipart field names', async () => {
+  const operations = await readFile(path.join(ROOT, 'skills', 'operations', 'operations.md'), 'utf8');
+  assert.match(operations, /operations\.product\.config-file[^\n]*--upload configFile=<absolute-path>/);
+  assert.match(operations, /operations\.asset-template\.submit[^\n]*--json-stdin/);
+  for (const field of ['id,name,riskLevel,version,status,doubleTime,annualReturnRange,strategyPosition,allocations[]', 'configType,productName,ratio,expectedReturn']) assert.ok(operations.includes(field));
+
+  const customer = await readFile(path.join(ROOT, 'skills', 'customer', 'operations.md'), 'utf8');
+  assert.match(customer, /customer\.agreement\.fields[^\n]*--json-stdin[^\n]*顶层数组（不能包`fields`）[^\n]*`fieldKey,fieldValue`/);
+
+  const manager = await readFile(path.join(ROOT, 'skills', 'manager', 'operations.md'), 'utf8');
+  assert.match(manager, /manager\.contract\.config[^\n]*--json-stdin[^\n]*--form request=<JSON-string>[^\n]*--upload approvalFiles=<absolute-path>/);
+  assert.match(manager, /两个AllocationsJson值必须是JSON编码字符串而非直接数组/);
+  assert.ok(manager.includes('comment,customerId,productId,configTitle,managerSupplement,specificConfigAdvice,strategyAllocationsJson,allocationElementsJson,trustSpvPackageFlowId,trustSpvPackageFlowIds,reinvestWithoutPayment'));
+
+  const specialist = await readFile(path.join(ROOT, 'skills', 'specialist', 'operations.md'), 'utf8');
+  for (const field of ['recognizedInfoJson', 'contractFiles', 'spvFiles']) assert.ok(specialist.includes(field));
+  assert.match(specialist, /specialist\.flow\.create[^\n]*先执行recognize[^\n]*recognizedInfoJson=<JSON-array-string>[^\n]*investmentPath[^\n]*deliveryForm[^\n]*value`均非空/);
+  assert.match(specialist, /specialist\.flow\.recognize[^\n]*不得传customerId\/title\/recognizedInfoJson/);
+});
+
 test('skills contain no credential payloads and only admin init may omit an explicit profile', async () => {
   for (const file of await skillFiles()) {
     const text = await readFile(file, 'utf8');
@@ -195,7 +239,7 @@ test('skills contain no credential payloads and only admin init may omit an expl
 
 test('package allowlist includes shared CLI and the complete skill pack', async () => {
   const pkg = JSON.parse(await readFile(path.join(ROOT, 'package.json'), 'utf8'));
-  assert.equal(pkg.version, '0.4.0');
+  assert.equal(pkg.version, '0.4.1');
   assert.equal(pkg.private, true);
   for (const entry of ['bin', 'src', 'skills', 'references', 'README.md', 'SKILL.md']) assert.ok(pkg.files.includes(entry));
   assert.deepEqual(pkg.files, ['bin', 'src', 'skills', 'references', 'README.md', 'SKILL.md']);
@@ -211,7 +255,7 @@ test('public package has only shared runtime modules and documents admin initial
     readFile(path.join(ROOT, 'references', 'cli-contract.md'), 'utf8'),
   ]);
   assert.ok(corpus.every((text) => /admin init/.test(text)));
-  assert.match(corpus[0], /jiaban-cli-0\.4\.0\.tgz/);
+  assert.match(corpus[0], /jiaban-cli-0\.4\.1\.tgz/);
 });
 
 test('administrator setup triggers route uniquely to web-admin', async () => {
